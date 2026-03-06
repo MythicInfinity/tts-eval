@@ -51,11 +51,22 @@ def _patch_hf_hub_download_auth_token_compat(huggingface_hub: Any) -> None:
     if "use_auth_token" in parameters:
         return
 
+    missing_entry_error_names = {
+        "EntryNotFoundError",
+        "LocalEntryNotFoundError",
+        "RemoteEntryNotFoundError",
+    }
+
     def hf_hub_download_compat(*args: Any, **kwargs: Any) -> Any:
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None and "token" not in kwargs:
             kwargs["token"] = use_auth_token
-        return hf_hub_download(*args, **kwargs)
+        try:
+            return hf_hub_download(*args, **kwargs)
+        except Exception as exc:
+            if exc.__class__.__name__ in missing_entry_error_names:
+                raise ValueError("File not found on HF hub") from exc
+            raise
 
     huggingface_hub.hf_hub_download = hf_hub_download_compat
 

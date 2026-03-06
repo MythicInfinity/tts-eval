@@ -47,6 +47,20 @@ class HuggingFaceHubCompatTests(unittest.TestCase):
         self.assertEqual(result, "ok")
         self.assertEqual(calls, [(("repo", "file"), {"token": "secret"})])
 
+    def test_patch_converts_missing_entry_errors_to_value_error(self) -> None:
+        class EntryNotFoundError(Exception):
+            pass
+
+        def hf_hub_download(*args: object, token: object = None, **kwargs: object) -> str:
+            raise EntryNotFoundError("custom.py is missing")
+
+        module = SimpleNamespace(hf_hub_download=hf_hub_download)
+
+        _patch_hf_hub_download_auth_token_compat(module)
+
+        with self.assertRaisesRegex(ValueError, "File not found on HF hub"):
+            module.hf_hub_download("repo", "custom.py", use_auth_token=False)
+
     def test_patch_does_not_wrap_when_legacy_kwarg_is_already_supported(self) -> None:
         def hf_hub_download(*args: object, use_auth_token: object = None, **kwargs: object) -> str:
             return "ok"
