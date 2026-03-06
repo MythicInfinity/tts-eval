@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import inspect
 import os
 import platform
 import shutil
@@ -78,15 +79,39 @@ def _ttsds_package_version(module: Any) -> str:
         return "unknown"
 
 
+def _patch_hf_hub_download_auth_token_compat(huggingface_hub: Any) -> None:
+    hf_hub_download = getattr(huggingface_hub, "hf_hub_download", None)
+    if hf_hub_download is None:
+        return
+
+    try:
+        parameters = inspect.signature(hf_hub_download).parameters
+    except (TypeError, ValueError):
+        return
+
+    if "use_auth_token" in parameters:
+        return
+
+    def hf_hub_download_compat(*args: Any, **kwargs: Any) -> Any:
+        use_auth_token = kwargs.pop("use_auth_token", None)
+        if use_auth_token is not None and "token" not in kwargs:
+            kwargs["token"] = use_auth_token
+        return hf_hub_download(*args, **kwargs)
+
+    huggingface_hub.hf_hub_download = hf_hub_download_compat
+
+
 def load_ttsds2_runtime() -> TTSDS2Runtime:
     _repair_ttsds_noise_reference_cache()
     try:
+        import huggingface_hub
+        _patch_hf_hub_download_auth_token_compat(huggingface_hub)
         import ttsds
         from ttsds import BenchmarkSuite
         from ttsds.benchmarks.benchmark import BenchmarkCategory
         from ttsds.util.dataset import DirectoryDataset
     except ModuleNotFoundError as exc:
-        raise RuntimeError("ttsds must be installed in the runner environment") from exc
+        raise RuntimeError("ttsds and huggingface_hub must be installed in the runner environment") from exc
 
     package_version = _ttsds_package_version(ttsds)
     metric_version = (

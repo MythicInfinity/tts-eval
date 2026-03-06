@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import os
+import sys
 import tempfile
 import unittest
 import wave
 from pathlib import Path
+from types import ModuleType
 from types import SimpleNamespace
 from unittest import mock
 
 from tts_eval.ttsds2 import (
     TTSDS2_WEIGHTS,
+    load_ttsds2_runtime,
     _repair_ttsds_noise_reference_cache,
     _ttsds_package_version,
     collect_valid_wavs,
@@ -79,6 +82,52 @@ class TTSDS2EvaluationTests(unittest.TestCase):
                 _repair_ttsds_noise_reference_cache()
 
             self.assertTrue(noise_reference_dir.exists())
+
+    def test_load_runtime_patches_hf_hub_download_use_auth_token_compat(self) -> None:
+        captured: dict[str, object] = {}
+
+        def hf_hub_download(*args: object, token: object = None, **kwargs: object) -> str:
+            captured["args"] = args
+            captured["token"] = token
+            captured["kwargs"] = kwargs
+            return "ok"
+
+        fake_hf_module = ModuleType("huggingface_hub")
+        fake_hf_module.hf_hub_download = hf_hub_download
+
+        fake_ttsds_module = ModuleType("ttsds")
+        fake_ttsds_module.__version__ = "2.1.1"
+        fake_ttsds_module.BenchmarkSuite = object
+        fake_benchmark_module = ModuleType("ttsds.benchmarks.benchmark")
+        fake_benchmark_module.BenchmarkCategory = SimpleNamespace(
+            SPEAKER="speaker",
+            INTELLIGIBILITY="intelligibility",
+            PROSODY="prosody",
+            GENERIC="generic",
+            ENVIRONMENT="environment",
+        )
+        fake_dataset_module = ModuleType("ttsds.util.dataset")
+        fake_dataset_module.DirectoryDataset = object
+
+        with mock.patch.dict(
+            sys.modules,
+            {
+                "huggingface_hub": fake_hf_module,
+                "ttsds": fake_ttsds_module,
+                "ttsds.benchmarks": ModuleType("ttsds.benchmarks"),
+                "ttsds.benchmarks.benchmark": fake_benchmark_module,
+                "ttsds.util": ModuleType("ttsds.util"),
+                "ttsds.util.dataset": fake_dataset_module,
+            },
+        ):
+            runtime = load_ttsds2_runtime()
+            result = fake_hf_module.hf_hub_download("repo", "file", use_auth_token="secret")
+
+        self.assertEqual(result, "ok")
+        self.assertEqual(captured["args"], ("repo", "file"))
+        self.assertEqual(captured["token"], "secret")
+        self.assertEqual(captured["kwargs"], {})
+        self.assertEqual(runtime.package_version, "2.1.1")
 
     def test_run_ttsds2_benchmark_uses_fixed_weights(self) -> None:
         captured: dict[str, object] = {}
