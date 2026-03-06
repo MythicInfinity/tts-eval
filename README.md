@@ -56,6 +56,18 @@ Run DNSMOS:
 eval/runners/dnsmos/d.sh
 ```
 
+Tune DNSMOS batch size (default `8`) via env var:
+
+```bash
+DNSMOS_BATCH_SIZE=16 eval/runners/dnsmos/d.sh
+```
+
+Optional DNSMOS runtime tuning:
+
+```bash
+DNSMOS_DEVICE=auto DNSMOS_NUM_THREADS=8 eval/runners/dnsmos/d.sh
+```
+
 By default, all eval launchers use:
 
 - `data/inputs`
@@ -130,10 +142,16 @@ The coalesced file contains one object per model and currently includes:
 
 ## Plotting Mean Results
 
-Generate a grouped bar chart of the latest mean evals per model:
+Generate a grouped bar chart of the latest mean evals, grouped by eval metric with one bar per model:
 
 ```bash
 scripts/plot_eval_means/d.sh --eval-root . --output data/evals/mean_eval_plot.png
+```
+
+Use the previous layout with evals grouped under each model:
+
+```bash
+scripts/plot_eval_means/d.sh --eval-root . --output data/evals/mean_eval_plot.png --group-by-model
 ```
 
 Add stddev error bars where the metric exposes `metric_std`:
@@ -159,5 +177,6 @@ The plot uses:
   - `GENERIC=1/3`
   - `ENVIRONMENT=0.0`
 - `dnsmos` uses the TorchMetrics functional DNSMOS API and records only the overall MOS-like output.
+- `dnsmos` evaluates utterances in batches (default `8` per forward pass) when sample rate and waveform length match; it falls back to per-utterance scoring if a batch call fails.
 - `dnsmos` persists TorchMetrics model downloads by mounting the host cache path `${XDG_CACHE_HOME:-$HOME/.cache}/torchmetrics` into `/home/app/.torchmetrics`.
 - Invalid or unreadable WAVs are skipped during file discovery.

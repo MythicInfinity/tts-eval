@@ -28,6 +28,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--timestamp", type=str, default=None)
     parser.add_argument("--personalized", action="store_true")
+    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--device", type=str, default="auto")
+    parser.add_argument("--num-threads", type=int, default=None)
     return parser.parse_args()
 
 
@@ -35,7 +38,12 @@ def main() -> int:
     args = parse_args()
     run_timestamp_utc = args.timestamp or utc_timestamp_now()
     timestamp_for_filename = filename_timestamp(run_timestamp_utc)
-    runtime = load_dnsmos_runtime(personalized=args.personalized)
+    execution_device = None if args.device == "auto" else args.device
+    runtime = load_dnsmos_runtime(
+        personalized=args.personalized,
+        execution_device=execution_device,
+        num_threads=args.num_threads,
+    )
     models = iter_models(args.inputs)
     log_runner_start("dnsmos", run_timestamp_utc, len(models))
 
@@ -46,6 +54,7 @@ def main() -> int:
             model_dir=model_input.model_dir,
             runtime=runtime,
             run_timestamp_utc=run_timestamp_utc,
+            batch_size=args.batch_size,
         )
         model_output_dir = args.output / model_input.model
         summary_payload = build_summary_payload(
@@ -60,6 +69,9 @@ def main() -> int:
         metadata_payload["run_timestamp_utc"] = run_timestamp_utc
         metadata_payload["torch_version"] = runtime.torch.__version__
         metadata_payload["torchaudio_version"] = runtime.torchaudio.__version__
+        metadata_payload["batch_size"] = args.batch_size
+        metadata_payload["execution_device"] = runtime.execution_device
+        metadata_payload["num_threads"] = runtime.num_threads
 
         write_json(model_output_dir / f"summary_{timestamp_for_filename}.json", summary_payload)
         write_jsonl(model_output_dir / f"per_utt_{timestamp_for_filename}.jsonl", records)

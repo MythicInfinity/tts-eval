@@ -12,6 +12,9 @@ HOST_CACHE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}"
 HOST_TORCHMETRICS_CACHE_DIR="${HOST_CACHE_DIR}/torchmetrics"
 DEFAULT_INPUTS_DIR="${REPO_ROOT}/data/inputs"
 DEFAULT_REFS_DIR="${REPO_ROOT}/data/refs"
+BATCH_SIZE="${DNSMOS_BATCH_SIZE:-8}"
+DEVICE="${DNSMOS_DEVICE:-auto}"
+NUM_THREADS="${DNSMOS_NUM_THREADS:-}"
 
 if [[ $# -gt 3 ]]; then
   echo "usage: d.sh [inputs_dir] [refs_dir] [timestamp]" >&2
@@ -66,10 +69,18 @@ docker_args=(
   /refs
   --output
   "${OUTPUT_DIR}"
+  --batch-size
+  "${BATCH_SIZE}"
+  --device
+  "${DEVICE}"
 )
 
 if [[ -n "${TIMESTAMP}" ]]; then
   docker_args+=(--timestamp "${TIMESTAMP}")
+fi
+
+if [[ -n "${NUM_THREADS}" ]]; then
+  docker_args+=(--num-threads "${NUM_THREADS}")
 fi
 
 docker run "${docker_args[@]}"

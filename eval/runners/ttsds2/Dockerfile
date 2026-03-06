@@ -15,6 +15,7 @@ RUN apt-get update \
         autoconf \
         automake \
         ffmpeg \
+        git \
         g++ \
         gfortran \
         libsndfile1 \

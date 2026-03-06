@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 
 @dataclass(frozen=True)
@@ -19,6 +19,19 @@ class PlotSeries:
     label: str
     values_by_model: dict[str, float]
     std_by_model: dict[str, float]
+
+
+PlotGroupBy = Literal["metric", "model"]
+
+
+@dataclass(frozen=True)
+class GroupedPlotData:
+    group_labels: list[str]
+    bar_labels: list[str]
+    values_by_bar: list[list[float]]
+    std_by_bar: list[list[float]]
+    x_axis_label: str
+    legend_title: str
 
 
 PLOT_METRICS = (
@@ -76,20 +89,64 @@ def build_plot_series(latest_summaries: dict[str, dict[str, dict[str, Any]]]) ->
     return models, series
 
 
+def build_grouped_plot_data(
+    models: list[str],
+    series: list[PlotSeries],
+    *,
+    group_by: PlotGroupBy = "metric",
+) -> GroupedPlotData:
+    populated_series = [metric_series for metric_series in series if metric_series.values_by_model]
+
+    if group_by == "metric":
+        return GroupedPlotData(
+            group_labels=[metric_series.label for metric_series in populated_series],
+            bar_labels=models,
+            values_by_bar=[
+                [metric_series.values_by_model.get(model, float("nan")) for metric_series in populated_series]
+                for model in models
+            ],
+            std_by_bar=[
+                [metric_series.std_by_model.get(model, 0.0) for metric_series in populated_series]
+                for model in models
+            ],
+            x_axis_label="Eval Metric",
+            legend_title="Model",
+        )
+
+    if group_by == "model":
+        return GroupedPlotData(
+            group_labels=models,
+            bar_labels=[metric_series.label for metric_series in populated_series],
+            values_by_bar=[
+                [metric_series.values_by_model.get(model, float("nan")) for model in models]
+                for metric_series in populated_series
+            ],
+            std_by_bar=[
+                [metric_series.std_by_model.get(model, 0.0) for model in models]
+                for metric_series in populated_series
+            ],
+            x_axis_label="Model",
+            legend_title="Eval Metric",
+        )
+
+    raise ValueError(f"unsupported plot grouping: {group_by}")
+
+
 def render_mean_plot(
     latest_summaries: dict[str, dict[str, dict[str, Any]]],
     output_path: Path,
-    title: str = "Mean Eval Scores By Model",
+    title: str | None = None,
     include_stddev: bool = False,
     dpi: int = 180,
+    group_by: PlotGroupBy = "metric",
 ) -> Path:
     models, series = build_plot_series(latest_summaries)
 
     if not models:
         raise ValueError("no model summaries found under eval root")
 
-    populated_series = [metric_series for metric_series in series if metric_series.values_by_model]
-    if not populated_series:
+    plot_data = build_grouped_plot_data(models, series, group_by=group_by)
+    if not plot_data.group_labels or not plot_data.bar_labels:
         raise ValueError("no plottable metric values found in latest summaries")
 
     try:
@@ -98,17 +155,21 @@ def render_mean_plot(
     except ModuleNotFoundError as exc:
         raise RuntimeError(f"missing plotting dependency: {exc.name}") from exc
 
-    x = np.arange(len(models))
-    width = 0.8 / len(populated_series)
-    offsets = np.linspace(-0.4 + (width / 2.0), 0.4 - (width / 2.0), len(populated_series))
+    x = np.arange(len(plot_data.group_labels))
+    width = 0.8 / len(plot_data.bar_labels)
+    offsets = np.linspace(-0.4 + (width / 2.0), 0.4 - (width / 2.0), len(plot_data.bar_labels))
 
-    fig, ax = plt.subplots(figsize=(max(10, len(models) * 1.4), 6))
+    fig, ax = plt.subplots(figsize=(max(10, len(plot_data.group_labels) * 1.8), 6))
 
-    for offset, metric_series in zip(offsets, populated_series, strict=True):
-        heights = [metric_series.values_by_model.get(model, float("nan")) for model in models]
+    for offset, bar_label, heights, std_values in zip(
+        offsets,
+        plot_data.bar_labels,
+        plot_data.values_by_bar,
+        plot_data.std_by_bar,
+        strict=True,
+    ):
         yerr = None
         if include_stddev:
-            std_values = [metric_series.std_by_model.get(model, 0.0) for model in models]
             if any(value > 0 for value in std_values):
                 yerr = std_values
 
@@ -116,19 +177,19 @@ def render_mean_plot(
             x + offset,
             heights,
             width=width,
-            label=metric_series.label,
+            label=bar_label,
             yerr=yerr,
             capsize=4 if yerr is not None else 0,
             alpha=0.9,
         )
 
-    ax.set_title(title)
-    ax.set_xlabel("Model")
+    ax.set_title(title or f"Mean Eval Scores By {'Metric' if group_by == 'metric' else 'Model'}")
+    ax.set_xlabel(plot_data.x_axis_label)
     ax.set_ylabel("Mean Score")
     ax.set_xticks(x)
-    ax.set_xticklabels(models, rotation=20, ha="right")
+    ax.set_xticklabels(plot_data.group_labels, rotation=20, ha="right")
     ax.grid(axis="y", alpha=0.25)
-    ax.legend()
+    ax.legend(title=plot_data.legend_title)
     fig.tight_layout()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

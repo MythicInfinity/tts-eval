@@ -21,12 +21,17 @@ from tts_eval.plotting import render_mean_plot
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Plot grouped mean eval bars per model from the latest summary JSONs."
+        description="Plot grouped mean eval bars from the latest summary JSONs."
     )
     parser.add_argument("--eval-root", type=Path, default=Path("."))
     parser.add_argument("--output", type=Path, default=Path("data/evals/mean_eval_plot.png"))
-    parser.add_argument("--title", type=str, default="Mean Eval Scores By Model")
+    parser.add_argument("--title", type=str, default=None)
     parser.add_argument("--include-stddev", action="store_true")
+    parser.add_argument(
+        "--group-by-model",
+        action="store_true",
+        help="Use the previous layout with eval metrics grouped under each model.",
+    )
     parser.add_argument("--dpi", type=int, default=180)
     return parser.parse_args()
 
@@ -41,6 +46,7 @@ def main() -> int:
             title=args.title,
             include_stddev=args.include_stddev,
             dpi=args.dpi,
+            group_by="model" if args.group_by_model else "metric",
         )
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
