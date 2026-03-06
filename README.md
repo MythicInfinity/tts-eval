@@ -159,4 +159,5 @@ The plot uses:
   - `GENERIC=1/3`
   - `ENVIRONMENT=0.0`
 - `dnsmos` uses the TorchMetrics functional DNSMOS API and records only the overall MOS-like output.
+- `dnsmos` persists TorchMetrics model downloads by mounting the host cache path `${XDG_CACHE_HOME:-$HOME/.cache}/torchmetrics` into `/home/app/.torchmetrics`.
 - Invalid or unreadable WAVs are skipped during file discovery.

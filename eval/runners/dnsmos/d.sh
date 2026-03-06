@@ -9,6 +9,7 @@ APP_DIR="${REPO_ROOT}"
 HOST_UID="$(id -u)"
 HOST_GID="$(id -g)"
 HOST_CACHE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}"
+HOST_TORCHMETRICS_CACHE_DIR="${HOST_CACHE_DIR}/torchmetrics"
 DEFAULT_INPUTS_DIR="${REPO_ROOT}/data/inputs"
 DEFAULT_REFS_DIR="${REPO_ROOT}/data/refs"
 
@@ -23,6 +24,7 @@ TIMESTAMP="${3:-}"
 OUTPUT_DIR="/app/data/evals/dnsmos"
 
 mkdir -p "${HOST_CACHE_DIR}"
+mkdir -p "${HOST_TORCHMETRICS_CACHE_DIR}"
 
 if [[ "${BUILD_IMAGE}" == "1" ]] || ! docker image inspect "${IMAGE_NAME}" >/dev/null 2>&1; then
   docker build \
@@ -43,10 +45,14 @@ docker_args=(
   HF_HOME=/home/app/.cache/huggingface
   -e
   TORCH_HOME=/home/app/.cache/torch
+  -e
+  TORCHMETRICS_CACHE=/home/app/.torchmetrics
   -v
   "${APP_DIR}:/app"
   -v
   "${HOST_CACHE_DIR}:/home/app/.cache"
+  -v
+  "${HOST_TORCHMETRICS_CACHE_DIR}:/home/app/.torchmetrics"
   -v
   "${INPUTS_DIR}:/inputs:ro"
   -v

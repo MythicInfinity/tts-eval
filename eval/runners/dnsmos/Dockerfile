@@ -7,6 +7,7 @@ ENV HOME=/home/app
 ENV XDG_CACHE_HOME=/home/app/.cache
 ENV HF_HOME=/home/app/.cache/huggingface
 ENV TORCH_HOME=/home/app/.cache/torch
+ENV TORCHMETRICS_CACHE=/home/app/.torchmetrics
 
 WORKDIR /app
 
@@ -14,7 +15,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /home/app/.cache /app/data \
+RUN mkdir -p /home/app/.cache /home/app/.torchmetrics /app/data \
     && chmod -R 0777 /home/app /app/data
 
 RUN pip install --no-cache-dir \
