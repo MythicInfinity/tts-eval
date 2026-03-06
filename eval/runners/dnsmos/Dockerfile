@@ -24,4 +24,5 @@ RUN pip install --no-cache-dir \
     librosa==0.11.0 \
     onnxruntime==1.22.1 \
     requests==2.32.5 \
-    soundfile==0.13.1
+    soundfile==0.13.1 \
+    tqdm==4.67.1

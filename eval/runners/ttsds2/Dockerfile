@@ -15,6 +15,7 @@ RUN apt-get update \
         autoconf \
         automake \
         ffmpeg \
+        g++ \
         gfortran \
         libsndfile1 \
         libtool \
@@ -26,4 +27,7 @@ RUN apt-get update \
 RUN mkdir -p /home/app/.cache /app/data \
     && chmod -R 0777 /home/app /app/data
 
-RUN pip install --no-cache-dir setuptools "numpy<2" "ttsds==2.1.1"
+RUN printf "setuptools<81\n" > /tmp/pip-constraints.txt \
+    && python -m pip install --no-cache-dir "setuptools<81" wheel "numpy<2" \
+    && PIP_CONSTRAINT=/tmp/pip-constraints.txt python -m pip install --no-cache-dir "ttsds==2.1.1" \
+    && rm -f /tmp/pip-constraints.txt

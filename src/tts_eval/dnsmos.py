@@ -113,13 +113,29 @@ def build_metadata_payload(metric_version: str, personalized: bool) -> dict[str,
     }
 
 
+def _iter_wavs_with_progress(model: str, wav_paths: list[Path]) -> Any:
+    try:
+        from tqdm.auto import tqdm
+    except ModuleNotFoundError:
+        return wav_paths
+
+    return tqdm(
+        wav_paths,
+        desc=f"[dnsmos] utts model={model}",
+        total=len(wav_paths),
+        unit="utt",
+        dynamic_ncols=True,
+        mininterval=1.0,
+    )
+
+
 def evaluate_model(model: str, model_dir: Path, runtime: DNSMOSRuntime, run_timestamp_utc: str) -> tuple[list[MetricRecord], float, int]:
     records: list[MetricRecord] = []
     total_audio_sec = 0.0
-    n_utts = 0
+    wav_paths = list(iter_wavs(model_dir))
+    n_utts = len(wav_paths)
 
-    for wav_path in iter_wavs(model_dir):
-        n_utts += 1
+    for wav_path in _iter_wavs_with_progress(model, wav_paths):
         utterance = build_utterance_input(wav_path)
 
         try:
