@@ -76,7 +76,7 @@ class HuggingFaceHubCompatTests(unittest.TestCase):
 class SpeakerSimilarityEvaluationTests(unittest.TestCase):
     def test_evaluate_model_scores_matching_speaker_and_reuses_reference_embedding(self) -> None:
         runtime = SimpleNamespace(metric_version="v1")
-        waveform = SimpleNamespace()
+        waveform = SimpleNamespace(shape=(1, 16000))
 
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -94,7 +94,7 @@ class SpeakerSimilarityEvaluationTests(unittest.TestCase):
             ]
             with mock.patch("tts_eval.speaker_sim.load_audio_sample", side_effect=load_side_effect):
                 with mock.patch("tts_eval.speaker_sim.build_reference_embedding", return_value="ref-embedding") as ref_mock:
-                    with mock.patch("tts_eval.speaker_sim.score_audio_sample", side_effect=[0.81, 0.79]):
+                    with mock.patch("tts_eval.speaker_sim.score_audio_batch", return_value=[0.81, 0.79]) as batch_mock:
                         records, total_audio_sec, n_utts = evaluate_model(
                             "model_a",
                             model_dir,
@@ -109,6 +109,7 @@ class SpeakerSimilarityEvaluationTests(unittest.TestCase):
         self.assertEqual([record.metric_value for record in records], [0.81, 0.79])
         self.assertEqual([record.status for record in records], ["ok", "ok"])
         self.assertEqual(ref_mock.call_count, 1)
+        self.assertEqual(batch_mock.call_count, 1)
 
     def test_evaluate_model_skips_missing_reference_speaker(self) -> None:
         runtime = SimpleNamespace(metric_version="v1")
@@ -124,7 +125,7 @@ class SpeakerSimilarityEvaluationTests(unittest.TestCase):
 
             with mock.patch(
                 "tts_eval.speaker_sim.load_audio_sample",
-                return_value=AudioSample(waveform=SimpleNamespace(), sample_rate=16000, duration_sec=1.25),
+                return_value=AudioSample(waveform=SimpleNamespace(shape=(1, 16000)), sample_rate=16000, duration_sec=1.25),
             ):
                 records, total_audio_sec, n_utts = evaluate_model("model_a", model_dir, refs_dir, runtime, "2026-03-06T00:00:00Z")
 
@@ -167,8 +168,8 @@ class SpeakerSimilarityEvaluationTests(unittest.TestCase):
             (refs_dir / "speaker01_00010.wav").write_bytes(b"wav")
 
             load_side_effect = [
-                AudioSample(waveform=SimpleNamespace(), sample_rate=16000, duration_sec=1.0),
-                AudioSample(waveform=SimpleNamespace(), sample_rate=16000, duration_sec=1.5),
+                AudioSample(waveform=SimpleNamespace(shape=(1, 16000)), sample_rate=16000, duration_sec=1.0),
+                AudioSample(waveform=SimpleNamespace(shape=(1, 16000)), sample_rate=16000, duration_sec=1.5),
             ]
             with mock.patch("tts_eval.speaker_sim.load_audio_sample", side_effect=load_side_effect):
                 with mock.patch(
@@ -192,3 +193,37 @@ class SpeakerSimilarityEvaluationTests(unittest.TestCase):
             ["no valid reference wavs for speaker speaker01", "no valid reference wavs for speaker speaker01"],
         )
         self.assertEqual(ref_mock.call_count, 1)
+
+    def test_evaluate_model_splits_batch_on_waveform_length_change(self) -> None:
+        runtime = SimpleNamespace(metric_version="v1")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            model_dir = root / "model"
+            refs_dir = root / "refs"
+            model_dir.mkdir()
+            refs_dir.mkdir()
+            (model_dir / "speaker01_00001.wav").write_bytes(b"wav")
+            (model_dir / "speaker01_00002.wav").write_bytes(b"wav")
+            (refs_dir / "speaker01_00010.wav").write_bytes(b"wav")
+
+            load_side_effect = [
+                AudioSample(waveform=SimpleNamespace(shape=(1, 16000)), sample_rate=16000, duration_sec=1.0),
+                AudioSample(waveform=SimpleNamespace(shape=(1, 24000)), sample_rate=16000, duration_sec=1.5),
+            ]
+            with mock.patch("tts_eval.speaker_sim.load_audio_sample", side_effect=load_side_effect):
+                with mock.patch("tts_eval.speaker_sim.build_reference_embedding", return_value="ref-embedding"):
+                    with mock.patch("tts_eval.speaker_sim.score_audio_batch", side_effect=[[0.81], [0.79]]) as batch_mock:
+                        records, total_audio_sec, n_utts = evaluate_model(
+                            "model_a",
+                            model_dir,
+                            refs_dir,
+                            runtime,
+                            "2026-03-06T00:00:00Z",
+                            batch_size=8,
+                        )
+
+        self.assertEqual(n_utts, 2)
+        self.assertEqual(total_audio_sec, 2.5)
+        self.assertEqual([record.metric_value for record in records], [0.81, 0.79])
+        self.assertEqual(batch_mock.call_count, 2)

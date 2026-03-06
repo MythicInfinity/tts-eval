@@ -21,4 +21,5 @@ RUN mkdir -p /home/app/.cache /app/data \
 RUN pip install --no-cache-dir \
     speechbrain==1.0.3 \
     torchaudio==2.5.1 \
-    soundfile==0.13.1
+    soundfile==0.13.1 \
+    tqdm==4.67.1

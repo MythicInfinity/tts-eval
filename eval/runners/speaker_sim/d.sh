@@ -12,6 +12,7 @@ HOST_CACHE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}"
 DEVICE="${SPEAKER_SIM_DEVICE:-auto}"
 DEFAULT_INPUTS_DIR="${REPO_ROOT}/data/inputs"
 DEFAULT_REFS_DIR="${REPO_ROOT}/data/refs"
+BATCH_SIZE="${SPEAKER_SIM_BATCH_SIZE:-8}"
 
 if [[ $# -gt 3 ]]; then
   echo "usage: d.sh [inputs_dir] [refs_dir] [timestamp]" >&2
@@ -63,9 +64,15 @@ docker_args=(
   /refs
   --output
   "${OUTPUT_DIR}"
+  --batch-size
+  "${BATCH_SIZE}"
   --device
   "${DEVICE}"
 )
+
+if [[ "${DEVICE}" != "cpu" ]]; then
+  docker_args=(--gpus all "${docker_args[@]}")
+fi
 
 if [[ -n "${TIMESTAMP}" ]]; then
   docker_args+=(--timestamp "${TIMESTAMP}")

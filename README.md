@@ -7,7 +7,7 @@ Current runners:
 - `ctc`: transcript-faithfulness via `torchaudio` `WAV2VEC2_ASR_LARGE_960H`
 - `ttsds2`: model-level distributional score via the official `ttsds` package
 - `dnsmos`: no-reference quality proxy via TorchMetrics DNSMOS overall
-- `speaker_sim`: per-utterance speaker similarity via SpeechBrain ECAPA embeddings
+- `speaker_sim`: per-utterance speaker similarity via batched SpeechBrain ECAPA embeddings
 
 ## Input Layout
 
@@ -69,10 +69,22 @@ Tune DNSMOS batch size (default `8`) via env var:
 DNSMOS_BATCH_SIZE=16 eval/runners/dnsmos/d.sh
 ```
 
+Tune speaker-sim batch size (default `8`) via env var:
+
+```bash
+SPEAKER_SIM_BATCH_SIZE=16 eval/runners/speaker_sim/d.sh
+```
+
 Optional DNSMOS runtime tuning:
 
 ```bash
 DNSMOS_DEVICE=auto DNSMOS_NUM_THREADS=8 eval/runners/dnsmos/d.sh
+```
+
+Optional speaker-sim runtime tuning:
+
+```bash
+SPEAKER_SIM_DEVICE=auto eval/runners/speaker_sim/d.sh
 ```
 
 By default, all eval launchers use:
@@ -193,6 +205,7 @@ The plot uses:
   - `ENVIRONMENT=0.0`
 - `dnsmos` uses the TorchMetrics functional DNSMOS API and records only the overall MOS-like output.
 - `speaker_sim` uses `speechbrain/spkrec-ecapa-voxceleb`, averages all reference embeddings per speaker, then scores each generated utterance with cosine similarity against that speaker centroid.
+- `speaker_sim` runs batched ECAPA inference (default `8`) when waveform lengths match and shows per-model tqdm progress bars.
 - `dnsmos` evaluates utterances in batches (default `8` per forward pass) when sample rate and waveform length match; it falls back to per-utterance scoring if a batch call fails.
 - `dnsmos` persists TorchMetrics model downloads by mounting the host cache path `${XDG_CACHE_HOME:-$HOME/.cache}/torchmetrics` into `/home/app/.torchmetrics`.
 - Invalid or unreadable WAVs are skipped during file discovery.

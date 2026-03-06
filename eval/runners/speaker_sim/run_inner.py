@@ -33,6 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--refs", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--timestamp", type=str, default=None)
+    parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--device", type=str, default="auto")
     return parser.parse_args()
 
@@ -58,6 +59,7 @@ def main() -> int:
             run_timestamp_utc=run_timestamp_utc,
             reference_wavs_by_speaker=reference_wavs_by_speaker,
             reference_embedding_cache=reference_embedding_cache,
+            batch_size=args.batch_size,
         )
         model_output_dir = args.output / model_input.model
         summary_payload = build_summary_payload(
@@ -72,6 +74,7 @@ def main() -> int:
         metadata_payload["run_timestamp_utc"] = run_timestamp_utc
         metadata_payload["torch_version"] = runtime.torch.__version__
         metadata_payload["torchaudio_version"] = runtime.torchaudio.__version__
+        metadata_payload["batch_size"] = args.batch_size
         metadata_payload["execution_device"] = runtime.execution_device
         metadata_payload["sample_rate"] = runtime.sample_rate
         metadata_payload["reference_speaker_count"] = len(reference_wavs_by_speaker)
