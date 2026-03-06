@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
@@ -22,10 +21,6 @@ from tts_eval.progress import log_model_progress, log_model_summary, log_runner_
 from tts_eval.utmos import build_metadata_payload, build_summary_payload, evaluate_model, load_utmos_runtime
 
 
-def _default_num_workers() -> int:
-    return max(1, min(8, os.cpu_count() or 1))
-
-
 def _parse_bool(value: str) -> bool:
     normalized = value.strip().lower()
     if normalized in {"1", "true", "yes", "y", "on"}:
@@ -41,9 +36,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--refs", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--timestamp", type=str, default=None)
-    parser.add_argument("--batch-size", type=int, default=16)
-    parser.add_argument("--num-workers", type=int, default=_default_num_workers())
-    parser.add_argument("--remove-silent-section", type=_parse_bool, default=True)
+    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--num-workers", type=int, default=2)
+    parser.add_argument("--remove-silent-section", type=_parse_bool, default=False)
     parser.add_argument("--device", type=str, default="cuda:0")
     return parser.parse_args()
 
@@ -52,10 +47,16 @@ def main() -> int:
     args = parse_args()
     run_timestamp_utc = args.timestamp or utc_timestamp_now()
     timestamp_for_filename = filename_timestamp(run_timestamp_utc)
+    print(
+        f"[utmos] loading runtime device={args.device} "
+        f"remove_silent_section={str(args.remove_silent_section).lower()}",
+        flush=True,
+    )
     runtime = load_utmos_runtime(
         execution_device=args.device,
         remove_silent_section=args.remove_silent_section,
     )
+    print(f"[utmos] runtime ready device={runtime.execution_device}", flush=True)
     models = iter_models(args.inputs)
     log_runner_start("utmos", run_timestamp_utc, len(models))
 

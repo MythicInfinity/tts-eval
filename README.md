@@ -63,28 +63,28 @@ Run UTMOS:
 eval/runners/utmos/d.sh
 ```
 
-Tune UTMOS batch size (default `16`) via env var:
+Tune UTMOS batch size (default `32`) via env var:
 
 ```bash
 UTMOS_BATCH_SIZE=32 eval/runners/utmos/d.sh
 ```
 
-Tune UTMOS data loading workers (default `min(8, CPU count)` with a floor of `1`) via env var:
+Tune UTMOS data loading workers (default `2`) via env var:
 
 ```bash
 UTMOS_NUM_WORKERS=8 eval/runners/utmos/d.sh
 ```
 
-If you see `Unexpected bus error encountered in worker` (shared memory exhaustion), increase Docker shm for UTMOS:
+If you see `Unexpected bus error encountered in worker` (shared memory exhaustion), increase Docker shm for UTMOS (default is `8g`):
 
 ```bash
-UTMOS_SHM_SIZE=8g eval/runners/utmos/d.sh
+UTMOS_SHM_SIZE=16g eval/runners/utmos/d.sh
 ```
 
-If CPU preprocessing dominates and GPU utilization stays low, try disabling silence trimming:
+To re-enable silence trimming (default is disabled), set:
 
 ```bash
-UTMOS_REMOVE_SILENT_SECTION=false eval/runners/utmos/d.sh
+UTMOS_REMOVE_SILENT_SECTION=true eval/runners/utmos/d.sh
 ```
 
 Tune DNSMOS batch size (default `8`) via env var:
