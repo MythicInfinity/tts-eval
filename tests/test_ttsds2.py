@@ -129,6 +129,39 @@ class TTSDS2EvaluationTests(unittest.TestCase):
         self.assertEqual(captured["kwargs"], {})
         self.assertEqual(runtime.package_version, "2.1.1")
 
+    def test_load_runtime_sets_torch_force_no_weights_only_load(self) -> None:
+        fake_hf_module = ModuleType("huggingface_hub")
+        fake_hf_module.hf_hub_download = lambda *args, **kwargs: "ok"
+
+        fake_ttsds_module = ModuleType("ttsds")
+        fake_ttsds_module.BenchmarkSuite = object
+        fake_benchmark_module = ModuleType("ttsds.benchmarks.benchmark")
+        fake_benchmark_module.BenchmarkCategory = SimpleNamespace(
+            SPEAKER="speaker",
+            INTELLIGIBILITY="intelligibility",
+            PROSODY="prosody",
+            GENERIC="generic",
+            ENVIRONMENT="environment",
+        )
+        fake_dataset_module = ModuleType("ttsds.util.dataset")
+        fake_dataset_module.DirectoryDataset = object
+
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", None)
+            with mock.patch.dict(
+                sys.modules,
+                {
+                    "huggingface_hub": fake_hf_module,
+                    "ttsds": fake_ttsds_module,
+                    "ttsds.benchmarks": ModuleType("ttsds.benchmarks"),
+                    "ttsds.benchmarks.benchmark": fake_benchmark_module,
+                    "ttsds.util": ModuleType("ttsds.util"),
+                    "ttsds.util.dataset": fake_dataset_module,
+                },
+            ):
+                load_ttsds2_runtime()
+                self.assertEqual(os.environ.get("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"), "1")
+
     def test_run_ttsds2_benchmark_uses_fixed_weights(self) -> None:
         captured: dict[str, object] = {}
 

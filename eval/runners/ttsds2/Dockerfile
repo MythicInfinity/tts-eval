@@ -7,6 +7,7 @@ ENV HOME=/home/app
 ENV XDG_CACHE_HOME=/home/app/.cache
 ENV HF_HOME=/home/app/.cache/huggingface
 ENV TORCH_HOME=/home/app/.cache/torch
+ENV TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
 
 WORKDIR /app
 

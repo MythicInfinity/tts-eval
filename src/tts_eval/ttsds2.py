@@ -103,6 +103,9 @@ def _patch_hf_hub_download_auth_token_compat(huggingface_hub: Any) -> None:
 
 def load_ttsds2_runtime() -> TTSDS2Runtime:
     _repair_ttsds_noise_reference_cache()
+    # Torch 2.6 defaults torch.load(..., weights_only=True), but TTSDS2 dependencies
+    # still load trusted full checkpoints without explicitly setting weights_only.
+    os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
     try:
         import huggingface_hub
         _patch_hf_hub_download_auth_token_compat(huggingface_hub)
