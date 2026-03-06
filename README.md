@@ -75,6 +75,12 @@ Tune UTMOS data loading workers (default `min(8, CPU count)` with a floor of `1`
 UTMOS_NUM_WORKERS=8 eval/runners/utmos/d.sh
 ```
 
+If you see `Unexpected bus error encountered in worker` (shared memory exhaustion), increase Docker shm for UTMOS:
+
+```bash
+UTMOS_SHM_SIZE=8g eval/runners/utmos/d.sh
+```
+
 Tune DNSMOS batch size (default `8`) via env var:
 
 ```bash

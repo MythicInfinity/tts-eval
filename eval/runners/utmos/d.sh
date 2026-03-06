@@ -13,6 +13,7 @@ DEFAULT_INPUTS_DIR="${REPO_ROOT}/data/inputs"
 DEFAULT_REFS_DIR="${REPO_ROOT}/data/refs"
 DEVICE="${UTMOS_DEVICE:-cuda:0}"
 BATCH_SIZE="${UTMOS_BATCH_SIZE:-16}"
+SHM_SIZE="${UTMOS_SHM_SIZE:-2g}"
 DEFAULT_NUM_WORKERS="$(nproc 2>/dev/null || echo 1)"
 if (( DEFAULT_NUM_WORKERS > 8 )); then
   DEFAULT_NUM_WORKERS=8
@@ -47,6 +48,8 @@ docker_args=(
   "${HOST_UID}:${HOST_GID}"
   --gpus
   all
+  --shm-size
+  "${SHM_SIZE}"
   -e
   HOME=/home/app
   -e
