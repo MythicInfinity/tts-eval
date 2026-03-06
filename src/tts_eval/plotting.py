@@ -42,12 +42,6 @@ PLOT_METRICS = (
         std_field="metric_std",
     ),
     PlotMetricSpec(
-        metric_dir="ttsds2",
-        label="TTSDS2 Total",
-        value_field="metric_value",
-        std_field=None,
-    ),
-    PlotMetricSpec(
         metric_dir="dnsmos",
         label="DNSMOS Overall",
         value_field="metric_mean",

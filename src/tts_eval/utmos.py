@@ -194,6 +194,22 @@ def build_prediction_batch_aliases(wav_paths: list[Path]) -> tuple[tempfile.Temp
     return batch_dir, alias_to_original, val_list
 
 
+def _iter_wavs_with_progress(model: str, wav_paths: list[Path]) -> Any:
+    try:
+        from tqdm.auto import tqdm
+    except ModuleNotFoundError:
+        return wav_paths
+
+    return tqdm(
+        wav_paths,
+        desc=f"[utmos] utts model={model}",
+        total=len(wav_paths),
+        unit="utt",
+        dynamic_ncols=True,
+        mininterval=1.0,
+    )
+
+
 def extract_batch_predictions(predictions: Any, alias_to_original: dict[str, Path], wav_paths: list[Path]) -> list[float]:
     if not isinstance(predictions, list) or len(predictions) != len(wav_paths):
         raise RuntimeError("utmos batch prediction did not return one result per wav")
@@ -399,7 +415,7 @@ def evaluate_model(
         pending_utterances.clear()
         pending_wav_paths.clear()
 
-    for wav_path in wav_paths:
+    for wav_path in _iter_wavs_with_progress(model, wav_paths):
         utterance = build_utterance_input(wav_path)
 
         try:

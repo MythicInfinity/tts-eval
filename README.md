@@ -5,7 +5,6 @@ This repo runs automated TTS evals against a generated `inputs/` tree and a shar
 Current runners:
 
 - `ctc`: transcript-faithfulness via `torchaudio` `WAV2VEC2_ASR_LARGE_960H`
-- `ttsds2`: model-level distributional score via the official `ttsds` package
 - `dnsmos`: no-reference quality proxy via TorchMetrics DNSMOS overall
 - `speaker_sim`: per-utterance speaker similarity via batched SpeechBrain ECAPA embeddings
 - `utmos`: per-utterance MOS prediction via the official `UTMOSv2` package
@@ -44,12 +43,6 @@ Run CTC:
 
 ```bash
 eval/runners/ctc/d.sh
-```
-
-Run TTSDS2:
-
-```bash
-eval/runners/ttsds2/d.sh
 ```
 
 Run DNSMOS:
@@ -134,7 +127,6 @@ scripts/run_all.sh
 This currently runs:
 
 - `ctc`
-- `ttsds2`
 - `dnsmos`
 - `speaker_sim`
 - `utmos`
@@ -144,7 +136,6 @@ This currently runs:
 Runner outputs are written under the repo-level `data/evals/` tree:
 
 - `data/evals/ctc/<model>/...`
-- `data/evals/ttsds2/<model>/...`
 - `data/evals/dnsmos/<model>/...`
 - `data/evals/speaker_sim/<model>/...`
 - `data/evals/utmos/<model>/...`
@@ -181,7 +172,6 @@ python3 scripts/coalesce_jsons.py --eval-root . --output data/evals/coalesced_su
 The coalesced file contains one object per model and currently includes:
 
 - `ctc_closeness_mean`
-- `ttsds2_total`
 - `dnsmos_ovrl_mean`
 - `speaker_sim_ecapa_mean`
 - `utmos_mean`
@@ -211,19 +201,12 @@ The plot uses:
 - `metric_mean` for utterance-level metrics such as `ctc` and `dnsmos`
 - `metric_mean` for utterance-level metrics such as `speaker_sim`
 - `metric_mean` for utterance-level metrics such as `utmos`
-- `metric_value` for model-level metrics such as `ttsds2`
 - mean values only, never median values
 - the plotting command runs fully inside Docker; no host venv or system Python packages are required
 
 ## Notes
 
 - `ctc` requires Docker with GPU access because the runner uses `--gpus all`.
-- `ttsds2` uses the official `ttsds` package with fixed category weights:
-  - `SPEAKER=0.0`
-  - `INTELLIGIBILITY=1/3`
-  - `PROSODY=1/3`
-  - `GENERIC=1/3`
-  - `ENVIRONMENT=0.0`
 - `dnsmos` uses the TorchMetrics functional DNSMOS API and records only the overall MOS-like output.
 - `speaker_sim` uses `speechbrain/spkrec-ecapa-voxceleb`, averages all reference embeddings per speaker, then scores each generated utterance with cosine similarity against that speaker centroid.
 - `speaker_sim` runs batched ECAPA inference (default `8`) when waveform lengths match and shows per-model tqdm progress bars.

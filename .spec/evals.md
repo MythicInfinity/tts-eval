@@ -881,3 +881,7 @@ Specifically:
 * `ttsds2_total` = **single model-level distributional score**, not an utterance mean
 
 That difference is intentional and should be preserved in implementation notes and downstream reporting.
+
+## 24. Update note (2026-03-06)
+
+`ttsds2` is removed from this repository and is no longer part of the evaluation stack due to poor implementation quality. Any earlier references to `ttsds2` in this spec are superseded by this note.
