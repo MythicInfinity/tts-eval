@@ -69,6 +69,12 @@ Tune UTMOS batch size (default `16`) via env var:
 UTMOS_BATCH_SIZE=32 eval/runners/utmos/d.sh
 ```
 
+Tune UTMOS data loading workers (default `min(8, CPU count)` with a floor of `1`) via env var:
+
+```bash
+UTMOS_NUM_WORKERS=8 eval/runners/utmos/d.sh
+```
+
 Tune DNSMOS batch size (default `8`) via env var:
 
 ```bash

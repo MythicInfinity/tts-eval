@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -21,6 +22,10 @@ from tts_eval.progress import log_model_progress, log_model_summary, log_runner_
 from tts_eval.utmos import build_metadata_payload, build_summary_payload, evaluate_model, load_utmos_runtime
 
 
+def _default_num_workers() -> int:
+    return max(1, min(8, os.cpu_count() or 1))
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run UTMOS over model directories.")
     parser.add_argument("--inputs", type=Path, required=True)
@@ -28,7 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--timestamp", type=str, default=None)
     parser.add_argument("--batch-size", type=int, default=16)
-    parser.add_argument("--num-workers", type=int, default=0)
+    parser.add_argument("--num-workers", type=int, default=_default_num_workers())
     parser.add_argument("--device", type=str, default="cuda:0")
     return parser.parse_args()
 

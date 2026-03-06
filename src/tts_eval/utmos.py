@@ -25,7 +25,7 @@ class SkipUtteranceError(Exception):
 
 @dataclass(frozen=True)
 class AudioSample:
-    waveform: Any
+    waveform: Any | None
     sample_rate: int
     duration_sec: float
 
@@ -102,25 +102,29 @@ def load_utmos_runtime(
 
 
 def load_audio_sample(path: Path, runtime: UTMOSRuntime) -> AudioSample:
+    # UTMOS scoring is path-based, so we only need lightweight metadata here.
+    # This avoids fully decoding every file in Python before UTMOS decodes it again.
     try:
-        waveform, sample_rate = runtime.torchaudio.load(str(path))
+        info = runtime.torchaudio.info(str(path))
     except Exception as exc:
         raise SkipUtteranceError(f"unreadable wav: {exc}") from exc
 
-    if waveform.numel() == 0:
-        raise SkipUtteranceError("empty wav")
+    sample_rate = int(getattr(info, "sample_rate", 0) or 0)
+    num_frames = int(getattr(info, "num_frames", 0) or 0)
+    num_channels = int(getattr(info, "num_channels", 0) or 0)
 
-    if waveform.ndim != 2:
+    if sample_rate <= 0:
+        raise SkipUtteranceError("unreadable wav: invalid sample rate")
+    if num_frames <= 0:
+        raise SkipUtteranceError("empty wav")
+    if num_channels <= 0:
         raise SkipUtteranceError("unexpected waveform rank")
 
-    if waveform.shape[0] > 1:
-        waveform = waveform.mean(dim=0, keepdim=True)
-
-    duration_sec = waveform.shape[-1] / sample_rate if sample_rate else 0.0
+    duration_sec = num_frames / sample_rate
     if duration_sec <= 0:
         raise SkipUtteranceError("empty wav")
 
-    return AudioSample(waveform=waveform, sample_rate=sample_rate, duration_sec=duration_sec)
+    return AudioSample(waveform=None, sample_rate=sample_rate, duration_sec=duration_sec)
 
 
 def extract_scalar_prediction(prediction: Any) -> float:
@@ -194,16 +198,15 @@ def build_prediction_batch_aliases(wav_paths: list[Path]) -> tuple[tempfile.Temp
     return batch_dir, alias_to_original, val_list
 
 
-def _iter_wavs_with_progress(model: str, wav_paths: list[Path]) -> Any:
+def _build_progress_bar(model: str, total: int) -> Any | None:
     try:
         from tqdm.auto import tqdm
     except ModuleNotFoundError:
-        return wav_paths
+        return None
 
     return tqdm(
-        wav_paths,
+        total=total,
         desc=f"[utmos] utts model={model}",
-        total=len(wav_paths),
         unit="utt",
         dynamic_ncols=True,
         mininterval=1.0,
@@ -355,6 +358,23 @@ def evaluate_model(
     n_utts = len(wav_paths)
     pending_utterances: list[Any] = []
     pending_wav_paths: list[Path] = []
+    progress_bar = _build_progress_bar(model, n_utts)
+    ok_count = 0
+    skip_count = 0
+    fail_count = 0
+
+    def append_record(record: MetricRecord) -> None:
+        nonlocal ok_count, skip_count, fail_count
+        records.append(record)
+        if record.status == "ok":
+            ok_count += 1
+        elif record.status == "skip":
+            skip_count += 1
+        elif record.status == "fail":
+            fail_count += 1
+        if progress_bar is not None:
+            progress_bar.update(1)
+            progress_bar.set_postfix(ok=ok_count, skip=skip_count, fail=fail_count, refresh=False)
 
     def flush_pending_batch() -> None:
         if not pending_utterances:
@@ -370,7 +390,7 @@ def evaluate_model(
         for utterance in pending_utterances:
             normalized_path = _normalize_path_key(utterance.wav_path)
             if normalized_path in scores_by_path:
-                records.append(
+                append_record(
                     MetricRecord(
                         run_timestamp_utc=run_timestamp_utc,
                         metric_name="utmos",
@@ -384,7 +404,7 @@ def evaluate_model(
                     )
                 )
             elif normalized_path in errors_by_path:
-                records.append(
+                append_record(
                     MetricRecord(
                         run_timestamp_utc=run_timestamp_utc,
                         metric_name="utmos",
@@ -398,7 +418,7 @@ def evaluate_model(
                     )
                 )
             else:  # pragma: no cover - defensive guard if resilient scoring returns an incomplete mapping
-                records.append(
+                append_record(
                     MetricRecord(
                         run_timestamp_utc=run_timestamp_utc,
                         metric_name="utmos",
@@ -415,49 +435,53 @@ def evaluate_model(
         pending_utterances.clear()
         pending_wav_paths.clear()
 
-    for wav_path in _iter_wavs_with_progress(model, wav_paths):
-        utterance = build_utterance_input(wav_path)
+    try:
+        for wav_path in wav_paths:
+            utterance = build_utterance_input(wav_path)
 
-        try:
-            audio = load_audio_sample(utterance.wav_path, runtime)
-            total_audio_sec += audio.duration_sec
-        except SkipUtteranceError as exc:
-            records.append(
-                MetricRecord(
-                    run_timestamp_utc=run_timestamp_utc,
-                    metric_name="utmos",
-                    metric_version=runtime.metric_version,
-                    model=model,
-                    utt_id=utterance.utt_id,
-                    wav_path=str(utterance.wav_path),
-                    metric_value=None,
-                    status="skip",
-                    error=str(exc),
+            try:
+                audio = load_audio_sample(utterance.wav_path, runtime)
+                total_audio_sec += audio.duration_sec
+            except SkipUtteranceError as exc:
+                append_record(
+                    MetricRecord(
+                        run_timestamp_utc=run_timestamp_utc,
+                        metric_name="utmos",
+                        metric_version=runtime.metric_version,
+                        model=model,
+                        utt_id=utterance.utt_id,
+                        wav_path=str(utterance.wav_path),
+                        metric_value=None,
+                        status="skip",
+                        error=str(exc),
+                    )
                 )
-            )
-            continue
-        except Exception as exc:  # pragma: no cover - exercised with backend/runtime failures
-            records.append(
-                MetricRecord(
-                    run_timestamp_utc=run_timestamp_utc,
-                    metric_name="utmos",
-                    metric_version=runtime.metric_version,
-                    model=model,
-                    utt_id=utterance.utt_id,
-                    wav_path=str(utterance.wav_path),
-                    metric_value=None,
-                    status="fail",
-                    error=str(exc),
+                continue
+            except Exception as exc:  # pragma: no cover - exercised with backend/runtime failures
+                append_record(
+                    MetricRecord(
+                        run_timestamp_utc=run_timestamp_utc,
+                        metric_name="utmos",
+                        metric_version=runtime.metric_version,
+                        model=model,
+                        utt_id=utterance.utt_id,
+                        wav_path=str(utterance.wav_path),
+                        metric_value=None,
+                        status="fail",
+                        error=str(exc),
+                    )
                 )
-            )
-            continue
+                continue
 
-        pending_utterances.append(utterance)
-        pending_wav_paths.append(utterance.wav_path)
-        if len(pending_utterances) >= batch_size:
-            flush_pending_batch()
+            pending_utterances.append(utterance)
+            pending_wav_paths.append(utterance.wav_path)
+            if len(pending_utterances) >= batch_size:
+                flush_pending_batch()
 
-    flush_pending_batch()
+        flush_pending_batch()
+    finally:
+        if progress_bar is not None:
+            progress_bar.close()
 
     return records, total_audio_sec, n_utts
 

@@ -13,7 +13,14 @@ DEFAULT_INPUTS_DIR="${REPO_ROOT}/data/inputs"
 DEFAULT_REFS_DIR="${REPO_ROOT}/data/refs"
 DEVICE="${UTMOS_DEVICE:-cuda:0}"
 BATCH_SIZE="${UTMOS_BATCH_SIZE:-16}"
-NUM_WORKERS="${UTMOS_NUM_WORKERS:-0}"
+DEFAULT_NUM_WORKERS="$(nproc 2>/dev/null || echo 1)"
+if (( DEFAULT_NUM_WORKERS > 8 )); then
+  DEFAULT_NUM_WORKERS=8
+fi
+if (( DEFAULT_NUM_WORKERS < 1 )); then
+  DEFAULT_NUM_WORKERS=1
+fi
+NUM_WORKERS="${UTMOS_NUM_WORKERS:-${DEFAULT_NUM_WORKERS}}"
 
 if [[ $# -gt 3 ]]; then
   echo "usage: d.sh [inputs_dir] [refs_dir] [timestamp]" >&2
