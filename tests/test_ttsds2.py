@@ -147,6 +147,28 @@ class TTSDS2EvaluationTests(unittest.TestCase):
         self.assertEqual(summary["category_scores"], {"prosody": 0.9})
         self.assertEqual(metadata["raw_result"], {"total": 0.88})
 
+    def test_evaluate_model_counts_model_level_failure_for_all_generated_utts(self) -> None:
+        runtime = SimpleNamespace(metric_version="ttsds_v1", package_version="1.0")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            model_dir = root / "model"
+            refs_dir = root / "refs"
+            model_dir.mkdir()
+            refs_dir.mkdir()
+            _write_wav(model_dir / "speaker01_00001.wav", frame_count=1600)
+            _write_wav(model_dir / "speaker01_00002.wav", frame_count=1600)
+            _write_wav(refs_dir / "speaker01_00001.wav", frame_count=800)
+
+            with mock.patch("tts_eval.ttsds2.run_ttsds2_benchmark", side_effect=RuntimeError("backend exploded")):
+                summary, metadata = evaluate_model("model_a", model_dir, refs_dir, runtime, "2026-03-06T00:00:00Z")
+
+        self.assertIsNone(summary["metric_value"])
+        self.assertEqual(summary["fail_count"], 2)
+        self.assertEqual(summary["n_utts"], 2)
+        self.assertEqual(summary["error"], "backend exploded")
+        self.assertNotIn("raw_result", metadata)
+
     def test_evaluate_model_handles_empty_generated_set(self) -> None:
         runtime = SimpleNamespace(metric_version="ttsds_v1", package_version="1.0")
 

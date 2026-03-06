@@ -262,7 +262,7 @@ def evaluate_model(
         try:
             result = run_ttsds2_benchmark(staged_generated, staged_refs, runtime)
         except Exception as exc:
-            summary_payload["fail_count"] = 1
+            summary_payload["fail_count"] = n_utts
             summary_payload["error"] = str(exc)
             return summary_payload, metadata_payload
 
