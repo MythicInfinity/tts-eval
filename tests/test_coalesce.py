@@ -78,6 +78,7 @@ class CoalesceTests(unittest.TestCase):
                     "ttsds2_total": None,
                     "dnsmos_ovrl_mean": None,
                     "speaker_sim_ecapa_mean": None,
+                    "utmos_mean": None,
                 }
             ],
         )
@@ -117,6 +118,7 @@ class CoalesceTests(unittest.TestCase):
                     "ttsds2_total": 0.8,
                     "dnsmos_ovrl_mean": None,
                     "speaker_sim_ecapa_mean": None,
+                    "utmos_mean": None,
                 }
             ],
         )
@@ -147,6 +149,7 @@ class CoalesceTests(unittest.TestCase):
                     "ttsds2_total": None,
                     "dnsmos_ovrl_mean": 3.2,
                     "speaker_sim_ecapa_mean": None,
+                    "utmos_mean": None,
                 }
             ],
         )
@@ -177,6 +180,38 @@ class CoalesceTests(unittest.TestCase):
                     "ttsds2_total": None,
                     "dnsmos_ovrl_mean": None,
                     "speaker_sim_ecapa_mean": 0.92,
+                    "utmos_mean": None,
+                }
+            ],
+        )
+
+    def test_build_coalesced_rows_merges_utmos(self) -> None:
+        rows = build_coalesced_rows(
+            {
+                "utmos": {
+                    "model_a": {
+                        "run_timestamp_utc": "2026-03-06T06:00:00Z",
+                        "model": "model_a",
+                        "n_utts": 5,
+                        "total_audio_sec": 7.5,
+                        "metric_mean": 4.15,
+                    }
+                }
+            }
+        )
+        self.assertEqual(
+            rows,
+            [
+                {
+                    "run_timestamp_utc": "2026-03-06T06:00:00Z",
+                    "model": "model_a",
+                    "n_utts": 5,
+                    "total_audio_sec": 7.5,
+                    "ctc_closeness_mean": None,
+                    "ttsds2_total": None,
+                    "dnsmos_ovrl_mean": None,
+                    "speaker_sim_ecapa_mean": None,
+                    "utmos_mean": 4.15,
                 }
             ],
         )

@@ -25,6 +25,10 @@ class PlottingTests(unittest.TestCase):
                     "model_a": {"metric_mean": 0.82, "metric_std": 0.04},
                     "model_b": {"metric_mean": 0.78, "metric_std": 0.03},
                 },
+                "utmos": {
+                    "model_a": {"metric_mean": 4.1, "metric_std": 0.12},
+                    "model_b": {"metric_mean": 4.0, "metric_std": 0.08},
+                },
             }
         )
 
@@ -37,6 +41,8 @@ class PlottingTests(unittest.TestCase):
         self.assertEqual(series[2].std_by_model, {"model_a": 0.1})
         self.assertEqual(series[3].values_by_model, {"model_a": 0.82, "model_b": 0.78})
         self.assertEqual(series[3].std_by_model, {"model_a": 0.04, "model_b": 0.03})
+        self.assertEqual(series[4].values_by_model, {"model_a": 4.1, "model_b": 4.0})
+        self.assertEqual(series[4].std_by_model, {"model_a": 0.12, "model_b": 0.08})
 
     def test_build_plot_series_ignores_non_numeric_values(self) -> None:
         models, series = build_plot_series(
@@ -50,6 +56,9 @@ class PlottingTests(unittest.TestCase):
                 "speaker_sim": {
                     "model_a": {"metric_mean": None, "metric_std": 0.04},
                 },
+                "utmos": {
+                    "model_a": {"metric_mean": "bad", "metric_std": 0.12},
+                },
             }
         )
 
@@ -57,6 +66,7 @@ class PlottingTests(unittest.TestCase):
         self.assertEqual(series[0].values_by_model, {})
         self.assertEqual(series[1].values_by_model, {})
         self.assertEqual(series[3].values_by_model, {})
+        self.assertEqual(series[4].values_by_model, {})
 
     def test_build_grouped_plot_data_groups_by_metric_by_default(self) -> None:
         models, series = build_plot_series(
@@ -76,6 +86,10 @@ class PlottingTests(unittest.TestCase):
                     "model_a": {"metric_mean": 0.82, "metric_std": 0.04},
                     "model_b": {"metric_mean": 0.78, "metric_std": 0.03},
                 },
+                "utmos": {
+                    "model_a": {"metric_mean": 4.1, "metric_std": 0.12},
+                    "model_b": {"metric_mean": 4.0, "metric_std": 0.08},
+                },
             }
         )
 
@@ -83,15 +97,15 @@ class PlottingTests(unittest.TestCase):
 
         self.assertEqual(
             grouped.group_labels,
-            ["CTC Closeness", "TTSDS2 Total", "DNSMOS Overall", "Speaker Similarity"],
+            ["CTC Closeness", "TTSDS2 Total", "DNSMOS Overall", "Speaker Similarity", "UTMOS"],
         )
         self.assertEqual(grouped.bar_labels, ["model_a", "model_b"])
-        self.assertEqual(grouped.values_by_bar[0], [0.91, 0.77, 3.4, 0.82])
-        self.assertEqual(grouped.std_by_bar[0], [0.03, 0.0, 0.1, 0.04])
+        self.assertEqual(grouped.values_by_bar[0], [0.91, 0.77, 3.4, 0.82, 4.1])
+        self.assertEqual(grouped.std_by_bar[0], [0.03, 0.0, 0.1, 0.04, 0.12])
         self.assertEqual(grouped.values_by_bar[1][:2], [0.88, 0.79])
         self.assertTrue(math.isnan(grouped.values_by_bar[1][2]))
-        self.assertEqual(grouped.values_by_bar[1][3], 0.78)
-        self.assertEqual(grouped.std_by_bar[1], [0.02, 0.0, 0.0, 0.03])
+        self.assertEqual(grouped.values_by_bar[1][3:], [0.78, 4.0])
+        self.assertEqual(grouped.std_by_bar[1], [0.02, 0.0, 0.0, 0.03, 0.08])
         self.assertEqual(grouped.x_axis_label, "Eval Metric")
         self.assertEqual(grouped.legend_title, "Model")
 
@@ -113,6 +127,10 @@ class PlottingTests(unittest.TestCase):
                     "model_a": {"metric_mean": 0.82, "metric_std": 0.04},
                     "model_b": {"metric_mean": 0.78, "metric_std": 0.03},
                 },
+                "utmos": {
+                    "model_a": {"metric_mean": 4.1, "metric_std": 0.12},
+                    "model_b": {"metric_mean": 4.0, "metric_std": 0.08},
+                },
             }
         )
 
@@ -121,7 +139,7 @@ class PlottingTests(unittest.TestCase):
         self.assertEqual(grouped.group_labels, ["model_a", "model_b"])
         self.assertEqual(
             grouped.bar_labels,
-            ["CTC Closeness", "TTSDS2 Total", "DNSMOS Overall", "Speaker Similarity"],
+            ["CTC Closeness", "TTSDS2 Total", "DNSMOS Overall", "Speaker Similarity", "UTMOS"],
         )
         self.assertEqual(grouped.values_by_bar[0], [0.91, 0.88])
         self.assertEqual(grouped.std_by_bar[0], [0.03, 0.02])
@@ -132,6 +150,8 @@ class PlottingTests(unittest.TestCase):
         self.assertEqual(grouped.std_by_bar[2], [0.1, 0.0])
         self.assertEqual(grouped.values_by_bar[3], [0.82, 0.78])
         self.assertEqual(grouped.std_by_bar[3], [0.04, 0.03])
+        self.assertEqual(grouped.values_by_bar[4], [4.1, 4.0])
+        self.assertEqual(grouped.std_by_bar[4], [0.12, 0.08])
         self.assertEqual(grouped.x_axis_label, "Model")
         self.assertEqual(grouped.legend_title, "Eval Metric")
 

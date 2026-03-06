@@ -59,6 +59,12 @@ PLOT_METRICS = (
         value_field="metric_mean",
         std_field="metric_std",
     ),
+    PlotMetricSpec(
+        metric_dir="utmos",
+        label="UTMOS",
+        value_field="metric_mean",
+        std_field="metric_std",
+    ),
 )
 
 

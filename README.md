@@ -8,6 +8,7 @@ Current runners:
 - `ttsds2`: model-level distributional score via the official `ttsds` package
 - `dnsmos`: no-reference quality proxy via TorchMetrics DNSMOS overall
 - `speaker_sim`: per-utterance speaker similarity via batched SpeechBrain ECAPA embeddings
+- `utmos`: per-utterance MOS prediction via the official `UTMOSv2` package
 
 ## Input Layout
 
@@ -61,6 +62,18 @@ Run speaker similarity:
 
 ```bash
 eval/runners/speaker_sim/d.sh
+```
+
+Run UTMOS:
+
+```bash
+eval/runners/utmos/d.sh
+```
+
+Tune UTMOS batch size (default `16`) via env var:
+
+```bash
+UTMOS_BATCH_SIZE=32 eval/runners/utmos/d.sh
 ```
 
 Tune DNSMOS batch size (default `8`) via env var:
@@ -124,6 +137,7 @@ This currently runs:
 - `ttsds2`
 - `dnsmos`
 - `speaker_sim`
+- `utmos`
 
 ## Outputs
 
@@ -133,6 +147,7 @@ Runner outputs are written under the repo-level `data/evals/` tree:
 - `data/evals/ttsds2/<model>/...`
 - `data/evals/dnsmos/<model>/...`
 - `data/evals/speaker_sim/<model>/...`
+- `data/evals/utmos/<model>/...`
 
 Each runner writes timestamped JSON artifacts per model:
 
@@ -151,6 +166,10 @@ The `speaker_sim` runner also writes:
 
 - `per_utt_<timestamp>.jsonl`
 
+The `utmos` runner also writes:
+
+- `per_utt_<timestamp>.jsonl`
+
 ## Coalescing Results
 
 The coalescer searches recursively, so you can point it at the repo root and it will find the current output tree.
@@ -165,6 +184,7 @@ The coalesced file contains one object per model and currently includes:
 - `ttsds2_total`
 - `dnsmos_ovrl_mean`
 - `speaker_sim_ecapa_mean`
+- `utmos_mean`
 
 ## Plotting Mean Results
 
@@ -190,6 +210,7 @@ The plot uses:
 
 - `metric_mean` for utterance-level metrics such as `ctc` and `dnsmos`
 - `metric_mean` for utterance-level metrics such as `speaker_sim`
+- `metric_mean` for utterance-level metrics such as `utmos`
 - `metric_value` for model-level metrics such as `ttsds2`
 - mean values only, never median values
 - the plotting command runs fully inside Docker; no host venv or system Python packages are required
@@ -206,6 +227,8 @@ The plot uses:
 - `dnsmos` uses the TorchMetrics functional DNSMOS API and records only the overall MOS-like output.
 - `speaker_sim` uses `speechbrain/spkrec-ecapa-voxceleb`, averages all reference embeddings per speaker, then scores each generated utterance with cosine similarity against that speaker centroid.
 - `speaker_sim` runs batched ECAPA inference (default `8`) when waveform lengths match and shows per-model tqdm progress bars.
+- `utmos` uses the official `UTMOSv2` package pinned to commit `e53a6762948b908105d48d6cfd453f1b58156ed0`, runs batched `input_dir` inference with the pretrained `fusion_stage3` model, and requires Docker GPU access.
 - `dnsmos` evaluates utterances in batches (default `8` per forward pass) when sample rate and waveform length match; it falls back to per-utterance scoring if a batch call fails.
 - `dnsmos` persists TorchMetrics model downloads by mounting the host cache path `${XDG_CACHE_HOME:-$HOME/.cache}/torchmetrics` into `/home/app/.torchmetrics`.
+- `utmos` persists model downloads by mounting the host cache path `${XDG_CACHE_HOME:-$HOME/.cache}` into `/home/app/.cache` and setting `UTMOSV2_CHACHE=/home/app/.cache/utmosv2` inside the runner container.
 - Invalid or unreadable WAVs are skipped during file discovery.
