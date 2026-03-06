@@ -10,3 +10,5 @@ TIMESTAMP="${3:-}"
 
 cd "${REPO_ROOT}"
 "${REPO_ROOT}/eval/runners/ctc/d.sh" "${INPUTS_DIR}" "${REFS_DIR}" "${TIMESTAMP}"
+"${REPO_ROOT}/eval/runners/ttsds2/d.sh" "${INPUTS_DIR}" "${REFS_DIR}" "${TIMESTAMP}"
+"${REPO_ROOT}/eval/runners/dnsmos/d.sh" "${INPUTS_DIR}" "${REFS_DIR}" "${TIMESTAMP}"

@@ -15,7 +15,7 @@ from tts_eval.io import write_json
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Coalesce latest metric summaries into one JSON file.")
-    parser.add_argument("--eval-root", type=Path, default=Path("data/evals"))
+    parser.add_argument("--eval-root", type=Path, default=Path("."))
     parser.add_argument("--output", type=Path, default=Path("data/evals/coalesced_summary.json"))
     return parser.parse_args()
 

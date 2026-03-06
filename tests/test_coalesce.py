@@ -9,6 +9,29 @@ from tts_eval.coalesce import build_coalesced_rows, collect_latest_summaries
 
 
 class CoalesceTests(unittest.TestCase):
+    def test_collect_latest_summaries_finds_runner_local_eval_dirs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo_root = Path(tmpdir)
+            model_dir = repo_root / "eval" / "runners" / "ttsds2" / "data" / "evals" / "ttsds2" / "model_a"
+            model_dir.mkdir(parents=True)
+            summary_path = model_dir / "summary_2026-03-06T02-00-00Z.json"
+            summary_path.write_text(
+                json.dumps(
+                    {
+                        "run_timestamp_utc": "2026-03-06T02:00:00Z",
+                        "model": "model_a",
+                        "n_utts": 2,
+                        "total_audio_sec": 2.0,
+                        "metric_value": 0.8,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            latest = collect_latest_summaries(repo_root)
+
+        self.assertEqual(latest["ttsds2"]["model_a"]["metric_value"], 0.8)
+
     def test_collect_latest_summaries_prefers_newest_timestamp(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             eval_root = Path(tmpdir)
@@ -52,6 +75,75 @@ class CoalesceTests(unittest.TestCase):
                     "n_utts": 2,
                     "total_audio_sec": 2.0,
                     "ctc_closeness_mean": 0.7,
+                    "ttsds2_total": None,
+                    "dnsmos_ovrl_mean": None,
+                }
+            ],
+        )
+
+    def test_build_coalesced_rows_merges_ttsds2(self) -> None:
+        rows = build_coalesced_rows(
+            {
+                "ctc": {
+                    "model_a": {
+                        "run_timestamp_utc": "2026-03-06T02:00:00Z",
+                        "model": "model_a",
+                        "n_utts": 2,
+                        "total_audio_sec": 2.0,
+                        "metric_mean": 0.7,
+                    }
+                },
+                "ttsds2": {
+                    "model_a": {
+                        "run_timestamp_utc": "2026-03-06T03:00:00Z",
+                        "model": "model_a",
+                        "n_utts": 2,
+                        "total_audio_sec": 2.0,
+                        "metric_value": 0.8,
+                    }
+                },
+            }
+        )
+        self.assertEqual(
+            rows,
+            [
+                {
+                    "run_timestamp_utc": "2026-03-06T03:00:00Z",
+                    "model": "model_a",
+                    "n_utts": 2,
+                    "total_audio_sec": 2.0,
+                    "ctc_closeness_mean": 0.7,
+                    "ttsds2_total": 0.8,
+                    "dnsmos_ovrl_mean": None,
+                }
+            ],
+        )
+
+    def test_build_coalesced_rows_merges_dnsmos(self) -> None:
+        rows = build_coalesced_rows(
+            {
+                "dnsmos": {
+                    "model_a": {
+                        "run_timestamp_utc": "2026-03-06T04:00:00Z",
+                        "model": "model_a",
+                        "n_utts": 3,
+                        "total_audio_sec": 5.0,
+                        "metric_mean": 3.2,
+                    }
+                }
+            }
+        )
+        self.assertEqual(
+            rows,
+            [
+                {
+                    "run_timestamp_utc": "2026-03-06T04:00:00Z",
+                    "model": "model_a",
+                    "n_utts": 3,
+                    "total_audio_sec": 5.0,
+                    "ctc_closeness_mean": None,
+                    "ttsds2_total": None,
+                    "dnsmos_ovrl_mean": 3.2,
                 }
             ],
         )

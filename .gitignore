@@ -11,3 +11,4 @@ build/
 dist/
 
 data/
+eval/runners/*/data/
