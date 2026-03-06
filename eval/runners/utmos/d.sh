@@ -14,6 +14,7 @@ DEFAULT_REFS_DIR="${REPO_ROOT}/data/refs"
 DEVICE="${UTMOS_DEVICE:-cuda:0}"
 BATCH_SIZE="${UTMOS_BATCH_SIZE:-16}"
 SHM_SIZE="${UTMOS_SHM_SIZE:-2g}"
+REMOVE_SILENT_SECTION="${UTMOS_REMOVE_SILENT_SECTION:-true}"
 DEFAULT_NUM_WORKERS="$(nproc 2>/dev/null || echo 1)"
 if (( DEFAULT_NUM_WORKERS > 8 )); then
   DEFAULT_NUM_WORKERS=8
@@ -81,6 +82,8 @@ docker_args=(
   "${BATCH_SIZE}"
   --num-workers
   "${NUM_WORKERS}"
+  --remove-silent-section
+  "${REMOVE_SILENT_SECTION}"
   --device
   "${DEVICE}"
 )

@@ -81,6 +81,12 @@ If you see `Unexpected bus error encountered in worker` (shared memory exhaustio
 UTMOS_SHM_SIZE=8g eval/runners/utmos/d.sh
 ```
 
+If CPU preprocessing dominates and GPU utilization stays low, try disabling silence trimming:
+
+```bash
+UTMOS_REMOVE_SILENT_SECTION=false eval/runners/utmos/d.sh
+```
+
 Tune DNSMOS batch size (default `8`) via env var:
 
 ```bash

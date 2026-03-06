@@ -26,6 +26,15 @@ def _default_num_workers() -> int:
     return max(1, min(8, os.cpu_count() or 1))
 
 
+def _parse_bool(value: str) -> bool:
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+    raise argparse.ArgumentTypeError(f"invalid boolean value: {value}")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run UTMOS over model directories.")
     parser.add_argument("--inputs", type=Path, required=True)
@@ -34,6 +43,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timestamp", type=str, default=None)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--num-workers", type=int, default=_default_num_workers())
+    parser.add_argument("--remove-silent-section", type=_parse_bool, default=True)
     parser.add_argument("--device", type=str, default="cuda:0")
     return parser.parse_args()
 
@@ -42,7 +52,10 @@ def main() -> int:
     args = parse_args()
     run_timestamp_utc = args.timestamp or utc_timestamp_now()
     timestamp_for_filename = filename_timestamp(run_timestamp_utc)
-    runtime = load_utmos_runtime(execution_device=args.device)
+    runtime = load_utmos_runtime(
+        execution_device=args.device,
+        remove_silent_section=args.remove_silent_section,
+    )
     models = iter_models(args.inputs)
     log_runner_start("utmos", run_timestamp_utc, len(models))
 
@@ -81,6 +94,7 @@ def main() -> int:
         metadata_payload["execution_device"] = runtime.execution_device
         metadata_payload["batch_size"] = args.batch_size
         metadata_payload["num_workers"] = args.num_workers
+        metadata_payload["remove_silent_section"] = args.remove_silent_section
         write_json(model_output_dir / f"summary_{timestamp_for_filename}.json", summary_payload)
         write_jsonl(model_output_dir / f"per_utt_{timestamp_for_filename}.jsonl", records)
         write_json(model_output_dir / f"metadata_{timestamp_for_filename}.json", metadata_payload)
