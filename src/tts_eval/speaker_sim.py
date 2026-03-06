@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import platform
+import inspect
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -37,8 +38,31 @@ class SpeakerSimRuntime:
     checkpoint: str
 
 
+def _patch_hf_hub_download_auth_token_compat(huggingface_hub: Any) -> None:
+    hf_hub_download = getattr(huggingface_hub, "hf_hub_download", None)
+    if hf_hub_download is None:
+        return
+
+    try:
+        parameters = inspect.signature(hf_hub_download).parameters
+    except (TypeError, ValueError):
+        return
+
+    if "use_auth_token" in parameters:
+        return
+
+    def hf_hub_download_compat(*args: Any, **kwargs: Any) -> Any:
+        use_auth_token = kwargs.pop("use_auth_token", None)
+        if use_auth_token is not None and "token" not in kwargs:
+            kwargs["token"] = use_auth_token
+        return hf_hub_download(*args, **kwargs)
+
+    huggingface_hub.hf_hub_download = hf_hub_download_compat
+
+
 def load_speaker_sim_runtime(execution_device: str | None = None) -> SpeakerSimRuntime:
     try:
+        import huggingface_hub
         import speechbrain
         import torch
         import torchaudio
@@ -46,6 +70,7 @@ def load_speaker_sim_runtime(execution_device: str | None = None) -> SpeakerSimR
     except ModuleNotFoundError as exc:
         raise RuntimeError("speechbrain, torch, and torchaudio must be installed in the runner environment") from exc
 
+    _patch_hf_hub_download_auth_token_compat(huggingface_hub)
     resolved_execution_device = execution_device or ("cuda" if torch.cuda.is_available() else "cpu")
     cache_root = Path(os.environ.get("SPEECHBRAIN_CACHE_DIR", str(Path.home() / ".cache" / "speechbrain")))
     savedir = cache_root / "spkrec-ecapa-voxceleb"

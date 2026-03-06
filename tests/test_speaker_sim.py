@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+import inspect
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from tts_eval.speaker_sim import AudioSample, SkipUtteranceError, evaluate_model, index_reference_wavs
+from tts_eval.speaker_sim import (
+    AudioSample,
+    SkipUtteranceError,
+    _patch_hf_hub_download_auth_token_compat,
+    evaluate_model,
+    index_reference_wavs,
+)
 
 
 class SpeakerReferenceIndexTests(unittest.TestCase):
@@ -21,6 +28,35 @@ class SpeakerReferenceIndexTests(unittest.TestCase):
 
         self.assertEqual(sorted(refs_by_speaker), ["speaker01", "speaker02"])
         self.assertEqual([path.name for path in refs_by_speaker["speaker01"]], ["speaker01_00001.wav", "speaker01_00002.wav"])
+
+
+class HuggingFaceHubCompatTests(unittest.TestCase):
+    def test_patch_maps_use_auth_token_to_token_for_newer_hub_versions(self) -> None:
+        calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+        def hf_hub_download(*args: object, token: object = None, **kwargs: object) -> str:
+            calls.append((args, {"token": token, **kwargs}))
+            return "ok"
+
+        module = SimpleNamespace(hf_hub_download=hf_hub_download)
+
+        _patch_hf_hub_download_auth_token_compat(module)
+
+        result = module.hf_hub_download("repo", "file", use_auth_token="secret")
+
+        self.assertEqual(result, "ok")
+        self.assertEqual(calls, [(("repo", "file"), {"token": "secret"})])
+
+    def test_patch_does_not_wrap_when_legacy_kwarg_is_already_supported(self) -> None:
+        def hf_hub_download(*args: object, use_auth_token: object = None, **kwargs: object) -> str:
+            return "ok"
+
+        module = SimpleNamespace(hf_hub_download=hf_hub_download)
+
+        _patch_hf_hub_download_auth_token_compat(module)
+
+        self.assertIs(module.hf_hub_download, hf_hub_download)
+        self.assertIn("use_auth_token", inspect.signature(module.hf_hub_download).parameters)
 
 
 class SpeakerSimilarityEvaluationTests(unittest.TestCase):
