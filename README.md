@@ -7,6 +7,7 @@ Current runners:
 - `ctc`: transcript-faithfulness via `torchaudio` `WAV2VEC2_ASR_LARGE_960H`
 - `ttsds2`: model-level distributional score via the official `ttsds` package
 - `dnsmos`: no-reference quality proxy via TorchMetrics DNSMOS overall
+- `nisqa`: no-reference quality proxy via TorchMetrics NISQA MOS
 
 ## Input Layout
 
@@ -56,6 +57,12 @@ Run DNSMOS:
 eval/runners/dnsmos/d.sh
 ```
 
+Run NISQA:
+
+```bash
+eval/runners/nisqa/d.sh
+```
+
 Tune DNSMOS batch size (default `8`) via env var:
 
 ```bash
@@ -66,6 +73,12 @@ Optional DNSMOS runtime tuning:
 
 ```bash
 DNSMOS_DEVICE=auto DNSMOS_NUM_THREADS=8 eval/runners/dnsmos/d.sh
+```
+
+Tune NISQA batch size and device:
+
+```bash
+NISQA_BATCH_SIZE=16 NISQA_DEVICE=auto eval/runners/nisqa/d.sh
 ```
 
 By default, all eval launchers use:
@@ -104,6 +117,7 @@ This currently runs:
 - `ctc`
 - `ttsds2`
 - `dnsmos`
+- `nisqa`
 
 ## Outputs
 
@@ -112,6 +126,7 @@ Runner outputs are written under the repo-level `data/evals/` tree:
 - `data/evals/ctc/<model>/...`
 - `data/evals/ttsds2/<model>/...`
 - `data/evals/dnsmos/<model>/...`
+- `data/evals/nisqa/<model>/...`
 
 Each runner writes timestamped JSON artifacts per model:
 
@@ -123,6 +138,10 @@ The `ctc` runner also writes:
 - `per_utt_<timestamp>.jsonl`
 
 The `dnsmos` runner also writes:
+
+- `per_utt_<timestamp>.jsonl`
+
+The `nisqa` runner also writes:
 
 - `per_utt_<timestamp>.jsonl`
 
@@ -139,6 +158,7 @@ The coalesced file contains one object per model and currently includes:
 - `ctc_closeness_mean`
 - `ttsds2_total`
 - `dnsmos_ovrl_mean`
+- `nisqa_mos_mean`
 
 ## Plotting Mean Results
 
@@ -162,7 +182,7 @@ scripts/plot_eval_means/d.sh --eval-root . --output data/evals/mean_eval_plot.pn
 
 The plot uses:
 
-- `metric_mean` for utterance-level metrics such as `ctc` and `dnsmos`
+- `metric_mean` for utterance-level metrics such as `ctc`, `dnsmos`, and `nisqa`
 - `metric_value` for model-level metrics such as `ttsds2`
 - mean values only, never median values
 - the plotting command runs fully inside Docker; no host venv or system Python packages are required
@@ -179,4 +199,7 @@ The plot uses:
 - `dnsmos` uses the TorchMetrics functional DNSMOS API and records only the overall MOS-like output.
 - `dnsmos` evaluates utterances in batches (default `8` per forward pass) when sample rate and waveform length match; it falls back to per-utterance scoring if a batch call fails.
 - `dnsmos` persists TorchMetrics model downloads by mounting the host cache path `${XDG_CACHE_HOME:-$HOME/.cache}/torchmetrics` into `/home/app/.torchmetrics`.
+- `nisqa` uses the TorchMetrics functional NISQA API and records only the overall MOS output.
+- `nisqa` resamples inputs to `16 kHz` and evaluates utterances in batches (default `8` per forward pass) when waveform lengths match.
+- `nisqa` prioritizes batched execution and does not fall back to per-utterance rescoring after a batch failure.
 - Invalid or unreadable WAVs are skipped during file discovery.

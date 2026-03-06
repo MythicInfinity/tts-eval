@@ -53,6 +53,12 @@ PLOT_METRICS = (
         value_field="metric_mean",
         std_field="metric_std",
     ),
+    PlotMetricSpec(
+        metric_dir="nisqa",
+        label="NISQA MOS",
+        value_field="metric_mean",
+        std_field="metric_std",
+    ),
 )
 
 

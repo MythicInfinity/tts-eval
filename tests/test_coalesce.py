@@ -77,6 +77,7 @@ class CoalesceTests(unittest.TestCase):
                     "ctc_closeness_mean": 0.7,
                     "ttsds2_total": None,
                     "dnsmos_ovrl_mean": None,
+                    "nisqa_mos_mean": None,
                 }
             ],
         )
@@ -115,6 +116,7 @@ class CoalesceTests(unittest.TestCase):
                     "ctc_closeness_mean": 0.7,
                     "ttsds2_total": 0.8,
                     "dnsmos_ovrl_mean": None,
+                    "nisqa_mos_mean": None,
                 }
             ],
         )
@@ -144,6 +146,37 @@ class CoalesceTests(unittest.TestCase):
                     "ctc_closeness_mean": None,
                     "ttsds2_total": None,
                     "dnsmos_ovrl_mean": 3.2,
+                    "nisqa_mos_mean": None,
+                }
+            ],
+        )
+
+    def test_build_coalesced_rows_merges_nisqa(self) -> None:
+        rows = build_coalesced_rows(
+            {
+                "nisqa": {
+                    "model_a": {
+                        "run_timestamp_utc": "2026-03-06T05:00:00Z",
+                        "model": "model_a",
+                        "n_utts": 4,
+                        "total_audio_sec": 6.0,
+                        "metric_mean": 4.1,
+                    }
+                }
+            }
+        )
+        self.assertEqual(
+            rows,
+            [
+                {
+                    "run_timestamp_utc": "2026-03-06T05:00:00Z",
+                    "model": "model_a",
+                    "n_utts": 4,
+                    "total_audio_sec": 6.0,
+                    "ctc_closeness_mean": None,
+                    "ttsds2_total": None,
+                    "dnsmos_ovrl_mean": None,
+                    "nisqa_mos_mean": 4.1,
                 }
             ],
         )
