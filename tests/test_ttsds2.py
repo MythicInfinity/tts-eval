@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 import wave
@@ -7,7 +8,14 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from tts_eval.ttsds2 import TTSDS2_WEIGHTS, collect_valid_wavs, evaluate_model, inspect_wav, run_ttsds2_benchmark
+from tts_eval.ttsds2 import (
+    TTSDS2_WEIGHTS,
+    _repair_ttsds_noise_reference_cache,
+    collect_valid_wavs,
+    evaluate_model,
+    inspect_wav,
+    run_ttsds2_benchmark,
+)
 
 
 def _write_wav(path: Path, frame_count: int = 160) -> None:
@@ -37,6 +45,33 @@ class WavInspectionTests(unittest.TestCase):
 
 
 class TTSDS2EvaluationTests(unittest.TestCase):
+    def test_repair_ttsds_noise_reference_cache_removes_lfs_pointer_tarballs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_dir = Path(tmpdir) / "cache"
+            noise_reference_dir = cache_dir / "noise-reference"
+            noise_reference_dir.mkdir(parents=True)
+            (noise_reference_dir / "noise_all_ones.tar.gz").write_text(
+                "version https://git-lfs.github.com/spec/v1\n"
+                "oid sha256:deadbeef\n"
+                "size 123\n",
+                encoding="utf-8",
+            )
+            with mock.patch.dict(os.environ, {"TTSDS_CACHE_DIR": str(cache_dir)}):
+                _repair_ttsds_noise_reference_cache()
+
+            self.assertFalse(noise_reference_dir.exists())
+
+    def test_repair_ttsds_noise_reference_cache_keeps_real_tarballs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_dir = Path(tmpdir) / "cache"
+            noise_reference_dir = cache_dir / "noise-reference"
+            noise_reference_dir.mkdir(parents=True)
+            (noise_reference_dir / "noise_all_ones.tar.gz").write_bytes(b"\x1f\x8b\x08\x00")
+            with mock.patch.dict(os.environ, {"TTSDS_CACHE_DIR": str(cache_dir)}):
+                _repair_ttsds_noise_reference_cache()
+
+            self.assertTrue(noise_reference_dir.exists())
+
     def test_run_ttsds2_benchmark_uses_fixed_weights(self) -> None:
         captured: dict[str, object] = {}
 

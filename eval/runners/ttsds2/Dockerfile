@@ -16,6 +16,7 @@ RUN apt-get update \
         automake \
         ffmpeg \
         git \
+        git-lfs \
         g++ \
         gfortran \
         libsndfile1 \
@@ -23,6 +24,7 @@ RUN apt-get update \
         sox \
         subversion \
         unzip \
+    && git lfs install --system \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /home/app/.cache /app/data \

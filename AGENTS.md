@@ -3,4 +3,4 @@
 - ignore files in the .prompts directory, these are dev-only
 
 ### Specs
-- specifications are included in the .specs subdirectory
+- specifications are included in the .spec subdirectory

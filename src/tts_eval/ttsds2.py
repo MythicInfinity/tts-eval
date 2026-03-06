@@ -44,7 +44,30 @@ class TTSDS2Result:
     raw_result: dict[str, Any]
 
 
+def _ttsds_cache_dir() -> Path:
+    return Path(os.getenv("TTSDS_CACHE_DIR", Path.home() / ".cache" / "ttsds"))
+
+
+def _is_git_lfs_pointer(path: Path) -> bool:
+    try:
+        with path.open("rb") as handle:
+            return handle.read(128).startswith(b"version https://git-lfs.github.com/spec/v1")
+    except OSError:
+        return False
+
+
+def _repair_ttsds_noise_reference_cache() -> None:
+    noise_reference_dir = _ttsds_cache_dir() / "noise-reference"
+    if not noise_reference_dir.exists():
+        return
+
+    tarballs = list(noise_reference_dir.glob("*.tar.gz"))
+    if any(_is_git_lfs_pointer(tarball) for tarball in tarballs):
+        shutil.rmtree(noise_reference_dir, ignore_errors=True)
+
+
 def load_ttsds2_runtime() -> TTSDS2Runtime:
+    _repair_ttsds_noise_reference_cache()
     try:
         import ttsds
         from ttsds import BenchmarkSuite
