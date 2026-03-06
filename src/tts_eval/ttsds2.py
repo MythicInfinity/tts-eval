@@ -7,6 +7,7 @@ import shutil
 import tempfile
 import wave
 from dataclasses import dataclass
+from importlib import metadata
 from pathlib import Path
 from typing import Any
 
@@ -66,6 +67,17 @@ def _repair_ttsds_noise_reference_cache() -> None:
         shutil.rmtree(noise_reference_dir, ignore_errors=True)
 
 
+def _ttsds_package_version(module: Any) -> str:
+    package_version = getattr(module, "__version__", None)
+    if isinstance(package_version, str) and package_version:
+        return package_version
+
+    try:
+        return metadata.version("ttsds")
+    except metadata.PackageNotFoundError:
+        return "unknown"
+
+
 def load_ttsds2_runtime() -> TTSDS2Runtime:
     _repair_ttsds_noise_reference_cache()
     try:
@@ -76,8 +88,9 @@ def load_ttsds2_runtime() -> TTSDS2Runtime:
     except ModuleNotFoundError as exc:
         raise RuntimeError("ttsds must be installed in the runner environment") from exc
 
+    package_version = _ttsds_package_version(ttsds)
     metric_version = (
-        f"ttsds_{ttsds.__version__}"
+        f"ttsds_{package_version}"
         f"|weights:speaker={TTSDS2_WEIGHTS['SPEAKER']:.6f}"
         f",intelligibility={TTSDS2_WEIGHTS['INTELLIGIBILITY']:.6f}"
         f",prosody={TTSDS2_WEIGHTS['PROSODY']:.6f}"
@@ -89,7 +102,7 @@ def load_ttsds2_runtime() -> TTSDS2Runtime:
         BenchmarkSuite=BenchmarkSuite,
         DirectoryDataset=DirectoryDataset,
         BenchmarkCategory=BenchmarkCategory,
-        package_version=ttsds.__version__,
+        package_version=package_version,
         metric_version=metric_version,
     )
 

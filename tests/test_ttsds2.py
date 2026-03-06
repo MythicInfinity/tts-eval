@@ -11,6 +11,7 @@ from unittest import mock
 from tts_eval.ttsds2 import (
     TTSDS2_WEIGHTS,
     _repair_ttsds_noise_reference_cache,
+    _ttsds_package_version,
     collect_valid_wavs,
     evaluate_model,
     inspect_wav,
@@ -45,6 +46,13 @@ class WavInspectionTests(unittest.TestCase):
 
 
 class TTSDS2EvaluationTests(unittest.TestCase):
+    def test_ttsds_package_version_uses_module_attribute_when_present(self) -> None:
+        self.assertEqual(_ttsds_package_version(SimpleNamespace(__version__="2.1.1")), "2.1.1")
+
+    def test_ttsds_package_version_falls_back_to_package_metadata(self) -> None:
+        with mock.patch("tts_eval.ttsds2.metadata.version", return_value="2.1.1"):
+            self.assertEqual(_ttsds_package_version(SimpleNamespace()), "2.1.1")
+
     def test_repair_ttsds_noise_reference_cache_removes_lfs_pointer_tarballs(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_dir = Path(tmpdir) / "cache"
