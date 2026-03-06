@@ -33,4 +33,5 @@ RUN mkdir -p /home/app/.cache /app/data \
 RUN printf "setuptools<81\n" > /tmp/pip-constraints.txt \
     && python -m pip install --no-cache-dir "setuptools<81" wheel "numpy<2" \
     && PIP_CONSTRAINT=/tmp/pip-constraints.txt python -m pip install --no-cache-dir "ttsds==2.1.1" \
+    && python -c 'from pathlib import Path; import allosaurus; from allosaurus.bin.download_model import download_model; model_dir = Path(allosaurus.__file__).resolve().parent / "pretrained"; model_dir.mkdir(parents=True, exist_ok=True); download_model("latest")' \
     && rm -f /tmp/pip-constraints.txt
