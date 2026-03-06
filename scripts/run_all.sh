@@ -3,9 +3,16 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+DEFAULT_INPUTS_DIR="${REPO_ROOT}/data/inputs"
+DEFAULT_REFS_DIR="${REPO_ROOT}/data/refs"
 
-INPUTS_DIR="${1:?usage: run_all.sh <inputs_dir> <refs_dir> [timestamp] }"
-REFS_DIR="${2:?usage: run_all.sh <inputs_dir> <refs_dir> [timestamp] }"
+if [[ $# -gt 3 ]]; then
+  echo "usage: run_all.sh [inputs_dir] [refs_dir] [timestamp]" >&2
+  exit 1
+fi
+
+INPUTS_DIR="${1:-${DEFAULT_INPUTS_DIR}}"
+REFS_DIR="${2:-${DEFAULT_REFS_DIR}}"
 TIMESTAMP="${3:-}"
 
 cd "${REPO_ROOT}"

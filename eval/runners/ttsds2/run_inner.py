@@ -17,6 +17,7 @@ for src_dir in SRC_CANDIDATES:
 
 from tts_eval.discovery import iter_models
 from tts_eval.io import filename_timestamp, utc_timestamp_now, write_json
+from tts_eval.progress import log_model_progress, log_model_summary, log_runner_end, log_runner_start
 from tts_eval.ttsds2 import evaluate_model, load_ttsds2_runtime
 
 
@@ -34,8 +35,11 @@ def main() -> int:
     run_timestamp_utc = args.timestamp or utc_timestamp_now()
     timestamp_for_filename = filename_timestamp(run_timestamp_utc)
     runtime = load_ttsds2_runtime()
+    models = iter_models(args.inputs)
+    log_runner_start("ttsds2", run_timestamp_utc, len(models))
 
-    for model_input in iter_models(args.inputs):
+    for index, model_input in enumerate(models, start=1):
+        log_model_progress("ttsds2", model_input.model, index, len(models))
         summary_payload, metadata_payload = evaluate_model(
             model=model_input.model,
             model_dir=model_input.model_dir,
@@ -46,6 +50,9 @@ def main() -> int:
         model_output_dir = args.output / model_input.model
         write_json(model_output_dir / f"summary_{timestamp_for_filename}.json", summary_payload)
         write_json(model_output_dir / f"metadata_{timestamp_for_filename}.json", metadata_payload)
+        log_model_summary("ttsds2", summary_payload)
+
+    log_runner_end("ttsds2", len(models))
 
     return 0
 

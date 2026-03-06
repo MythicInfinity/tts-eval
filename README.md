@@ -36,30 +36,41 @@ refs/
 
 ## Running One Eval
 
-Each runner builds or reuses its own Docker image and writes outputs under its own directory because `/app` is the runner directory.
+Each runner builds or reuses its own Docker image, mounts the repo root at `/app`, runs the model code as your current host UID/GID instead of root, and mounts your host cache root into the container so model downloads are reused across runs.
 
 Run CTC:
 
 ```bash
-eval/runners/ctc/d.sh /abs/path/to/inputs /abs/path/to/refs
+eval/runners/ctc/d.sh
 ```
 
 Run TTSDS2:
 
 ```bash
-eval/runners/ttsds2/d.sh /abs/path/to/inputs /abs/path/to/refs
+eval/runners/ttsds2/d.sh
 ```
 
 Run DNSMOS:
 
 ```bash
-eval/runners/dnsmos/d.sh /abs/path/to/inputs /abs/path/to/refs
+eval/runners/dnsmos/d.sh
+```
+
+By default, all eval launchers use:
+
+- `data/inputs`
+- `data/refs`
+
+You can still override them:
+
+```bash
+eval/runners/ctc/d.sh /abs/path/to/inputs /abs/path/to/refs
 ```
 
 To force a rebuild of a runner image:
 
 ```bash
-BUILD_IMAGE=1 eval/runners/ctc/d.sh /abs/path/to/inputs /abs/path/to/refs
+BUILD_IMAGE=1 eval/runners/ctc/d.sh
 ```
 
 You can optionally pass a fixed UTC timestamp as the third argument:
@@ -73,7 +84,7 @@ eval/runners/ctc/d.sh /abs/path/to/inputs /abs/path/to/refs 2026-03-06T14:32:10Z
 Run all implemented runners:
 
 ```bash
-scripts/run_all.sh /abs/path/to/inputs /abs/path/to/refs
+scripts/run_all.sh
 ```
 
 This currently runs:
@@ -84,11 +95,11 @@ This currently runs:
 
 ## Outputs
 
-Runner outputs are written under each runner directory:
+Runner outputs are written under the repo-level `data/evals/` tree:
 
-- `eval/runners/ctc/data/evals/ctc/<model>/...`
-- `eval/runners/ttsds2/data/evals/ttsds2/<model>/...`
-- `eval/runners/dnsmos/data/evals/dnsmos/<model>/...`
+- `data/evals/ctc/<model>/...`
+- `data/evals/ttsds2/<model>/...`
+- `data/evals/dnsmos/<model>/...`
 
 Each runner writes timestamped JSON artifacts per model:
 
@@ -105,7 +116,7 @@ The `dnsmos` runner also writes:
 
 ## Coalescing Results
 
-The coalescer searches recursively, so you can point it at the repo root and it will find runner-local `data/evals/...` directories.
+The coalescer searches recursively, so you can point it at the repo root and it will find the current output tree.
 
 ```bash
 python3 scripts/coalesce_jsons.py --eval-root . --output data/evals/coalesced_summary.json
@@ -116,6 +127,27 @@ The coalesced file contains one object per model and currently includes:
 - `ctc_closeness_mean`
 - `ttsds2_total`
 - `dnsmos_ovrl_mean`
+
+## Plotting Mean Results
+
+Generate a grouped bar chart of the latest mean evals per model:
+
+```bash
+scripts/plot_eval_means/d.sh --eval-root . --output data/evals/mean_eval_plot.png
+```
+
+Add stddev error bars where the metric exposes `metric_std`:
+
+```bash
+scripts/plot_eval_means/d.sh --eval-root . --output data/evals/mean_eval_plot.png --include-stddev
+```
+
+The plot uses:
+
+- `metric_mean` for utterance-level metrics such as `ctc` and `dnsmos`
+- `metric_value` for model-level metrics such as `ttsds2`
+- mean values only, never median values
+- the plotting command runs fully inside Docker; no host venv or system Python packages are required
 
 ## Notes
 

@@ -18,6 +18,7 @@ for src_dir in SRC_CANDIDATES:
 from tts_eval.ctc import build_metadata_payload, build_summary_payload, evaluate_model, load_ctc_runtime
 from tts_eval.discovery import iter_models
 from tts_eval.io import filename_timestamp, utc_timestamp_now, write_json, write_jsonl
+from tts_eval.progress import log_model_progress, log_model_summary, log_runner_end, log_runner_start
 
 
 def parse_args() -> argparse.Namespace:
@@ -36,8 +37,11 @@ def main() -> int:
     timestamp_for_filename = filename_timestamp(run_timestamp_utc)
 
     runtime = load_ctc_runtime(args.device)
+    models = iter_models(args.inputs)
+    log_runner_start("ctc", run_timestamp_utc, len(models))
 
-    for model_input in iter_models(args.inputs):
+    for index, model_input in enumerate(models, start=1):
+        log_model_progress("ctc", model_input.model, index, len(models))
         records, total_audio_sec, n_utts = evaluate_model(
             model=model_input.model,
             model_dir=model_input.model_dir,
@@ -63,6 +67,9 @@ def main() -> int:
         write_json(model_output_dir / f"summary_{timestamp_for_filename}.json", summary_payload)
         write_jsonl(model_output_dir / f"per_utt_{timestamp_for_filename}.jsonl", records)
         write_json(model_output_dir / f"metadata_{timestamp_for_filename}.json", metadata_payload)
+        log_model_summary("ctc", summary_payload)
+
+    log_runner_end("ctc", len(models))
 
     return 0
 
