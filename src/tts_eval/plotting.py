@@ -54,8 +54,8 @@ PLOT_METRICS = (
         std_field="metric_std",
     ),
     PlotMetricSpec(
-        metric_dir="nisqa",
-        label="NISQA MOS",
+        metric_dir="speaker_sim",
+        label="Speaker Similarity",
         value_field="metric_mean",
         std_field="metric_std",
     ),

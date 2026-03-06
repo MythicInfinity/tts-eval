@@ -77,7 +77,7 @@ class CoalesceTests(unittest.TestCase):
                     "ctc_closeness_mean": 0.7,
                     "ttsds2_total": None,
                     "dnsmos_ovrl_mean": None,
-                    "nisqa_mos_mean": None,
+                    "speaker_sim_ecapa_mean": None,
                 }
             ],
         )
@@ -116,7 +116,7 @@ class CoalesceTests(unittest.TestCase):
                     "ctc_closeness_mean": 0.7,
                     "ttsds2_total": 0.8,
                     "dnsmos_ovrl_mean": None,
-                    "nisqa_mos_mean": None,
+                    "speaker_sim_ecapa_mean": None,
                 }
             ],
         )
@@ -146,21 +146,21 @@ class CoalesceTests(unittest.TestCase):
                     "ctc_closeness_mean": None,
                     "ttsds2_total": None,
                     "dnsmos_ovrl_mean": 3.2,
-                    "nisqa_mos_mean": None,
+                    "speaker_sim_ecapa_mean": None,
                 }
             ],
         )
 
-    def test_build_coalesced_rows_merges_nisqa(self) -> None:
+    def test_build_coalesced_rows_merges_speaker_similarity(self) -> None:
         rows = build_coalesced_rows(
             {
-                "nisqa": {
+                "speaker_sim": {
                     "model_a": {
                         "run_timestamp_utc": "2026-03-06T05:00:00Z",
                         "model": "model_a",
                         "n_utts": 4,
                         "total_audio_sec": 6.0,
-                        "metric_mean": 4.1,
+                        "metric_mean": 0.92,
                     }
                 }
             }
@@ -176,7 +176,7 @@ class CoalesceTests(unittest.TestCase):
                     "ctc_closeness_mean": None,
                     "ttsds2_total": None,
                     "dnsmos_ovrl_mean": None,
-                    "nisqa_mos_mean": 4.1,
+                    "speaker_sim_ecapa_mean": 0.92,
                 }
             ],
         )
