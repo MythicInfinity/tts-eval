@@ -1,0 +1,1 @@
+In the 'model-runners' subdirectory of this repo we will have a collection of model-runners each in their own subdirectory with Dockerfile and special run code to produce outputs that can be evaluated by the automated eval code in this repo.
