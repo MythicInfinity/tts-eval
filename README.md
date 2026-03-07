@@ -6,8 +6,10 @@ Current runners:
 
 - `ctc`: transcript-faithfulness via `torchaudio` `WAV2VEC2_ASR_LARGE_960H`
 - `dnsmos`: no-reference quality proxy via TorchMetrics DNSMOS overall
+- `nisqa`: no-reference MOS proxy via TorchMetrics NISQA MOS
 - `speaker_sim`: per-utterance speaker similarity via batched SpeechBrain ECAPA embeddings
 - `utmos`: per-utterance MOS prediction via the official `UTMOSv2` package
+- `audiobox`: per-utterance aesthetic scores via Audiobox Aesthetics (`CE`, `PQ`)
 
 ## Input Layout
 
@@ -51,6 +53,12 @@ Run DNSMOS:
 eval/runners/dnsmos/d.sh
 ```
 
+Run NISQA:
+
+```bash
+eval/runners/nisqa/d.sh
+```
+
 Run speaker similarity:
 
 ```bash
@@ -61,6 +69,12 @@ Run UTMOS:
 
 ```bash
 eval/runners/utmos/d.sh
+```
+
+Run Audiobox aesthetics:
+
+```bash
+eval/runners/audiobox/d.sh
 ```
 
 Tune UTMOS batch size (default `32`) via env var:
@@ -105,10 +119,22 @@ Tune DNSMOS batch size (default `8`) via env var:
 DNSMOS_BATCH_SIZE=16 eval/runners/dnsmos/d.sh
 ```
 
+Tune NISQA batch size (default `8`) via env var:
+
+```bash
+NISQA_BATCH_SIZE=16 eval/runners/nisqa/d.sh
+```
+
 Tune speaker-sim batch size (default `8`) via env var:
 
 ```bash
 SPEAKER_SIM_BATCH_SIZE=16 eval/runners/speaker_sim/d.sh
+```
+
+Tune Audiobox batch size (default `16`) via env var:
+
+```bash
+AUDIOBOX_BATCH_SIZE=32 eval/runners/audiobox/d.sh
 ```
 
 Optional DNSMOS runtime tuning:
@@ -121,6 +147,18 @@ Optional speaker-sim runtime tuning:
 
 ```bash
 SPEAKER_SIM_DEVICE=auto eval/runners/speaker_sim/d.sh
+```
+
+Optional NISQA runtime tuning:
+
+```bash
+NISQA_DEVICE=auto eval/runners/nisqa/d.sh
+```
+
+Optional Audiobox runtime tuning:
+
+```bash
+AUDIOBOX_DEVICE=cuda:1 eval/runners/audiobox/d.sh
 ```
 
 By default, all eval launchers use:
@@ -158,8 +196,10 @@ This currently runs:
 
 - `ctc`
 - `dnsmos`
+- `nisqa`
 - `speaker_sim`
 - `utmos`
+- `audiobox`
 
 ## Outputs
 
@@ -167,8 +207,10 @@ Runner outputs are written under the repo-level `data/evals/` tree:
 
 - `data/evals/ctc/<model>/...`
 - `data/evals/dnsmos/<model>/...`
+- `data/evals/nisqa/<model>/...`
 - `data/evals/speaker_sim/<model>/...`
 - `data/evals/utmos/<model>/...`
+- `data/evals/audiobox/<model>/...`
 
 Each runner writes timestamped JSON artifacts per model:
 
@@ -183,11 +225,19 @@ The `dnsmos` runner also writes:
 
 - `per_utt_<timestamp>.jsonl`
 
+The `nisqa` runner also writes:
+
+- `per_utt_<timestamp>.jsonl`
+
 The `speaker_sim` runner also writes:
 
 - `per_utt_<timestamp>.jsonl`
 
 The `utmos` runner also writes:
+
+- `per_utt_<timestamp>.jsonl`
+
+The `audiobox` runner also writes:
 
 - `per_utt_<timestamp>.jsonl`
 
@@ -203,8 +253,11 @@ The coalesced file contains one object per model and currently includes:
 
 - `ctc_closeness_mean`
 - `dnsmos_ovrl_mean`
+- `nisqa_mos_mean`
 - `speaker_sim_ecapa_mean`
 - `utmos_mean`
+- `audiobox_ce_mean`
+- `audiobox_pq_mean`
 
 ## Plotting Mean Results
 
@@ -229,8 +282,10 @@ scripts/plot_eval_means/d.sh --eval-root . --output data/evals/mean_eval_plot.pn
 The plot uses:
 
 - `metric_mean` for utterance-level metrics such as `ctc` and `dnsmos`
+- `metric_mean` for utterance-level metrics such as `nisqa`
 - `metric_mean` for utterance-level metrics such as `speaker_sim`
 - `metric_mean` for utterance-level metrics such as `utmos`
+- `ce_mean` and `pq_mean` for `audiobox`
 - mean values only, never median values
 - the plotting command runs fully inside Docker; no host venv or system Python packages are required
 
@@ -238,10 +293,15 @@ The plot uses:
 
 - `ctc` requires Docker with GPU access because the runner uses `--gpus all`.
 - `dnsmos` uses the TorchMetrics functional DNSMOS API and records only the overall MOS-like output.
+- `nisqa` uses the TorchMetrics functional NISQA API and records only the MOS output.
 - `speaker_sim` uses `speechbrain/spkrec-ecapa-voxceleb`, averages all reference embeddings per speaker, then scores each generated utterance with cosine similarity against that speaker centroid.
 - `speaker_sim` runs batched ECAPA inference (default `8`) when waveform lengths match and shows per-model tqdm progress bars.
 - `utmos` uses the official `UTMOSv2` package pinned to commit `e53a6762948b908105d48d6cfd453f1b58156ed0`, runs batched `input_dir` inference with the pretrained `fusion_stage3` model, and requires Docker GPU access.
+- `audiobox` uses `audiobox_aesthetics`, records `CE` and `PQ` per utterance, and requires Docker GPU access.
 - `dnsmos` evaluates utterances in batches (default `8` per forward pass) when sample rate and waveform length match; it falls back to per-utterance scoring if a batch call fails.
+- `nisqa` evaluates utterances in batches (default `8`) when waveform lengths match and marks the whole batch as failed on backend exceptions.
+- `audiobox` evaluates utterances in batches (default `16`) and recursively splits failed batches to isolate per-utterance failures.
 - `dnsmos` persists TorchMetrics model downloads by mounting the host cache path `${XDG_CACHE_HOME:-$HOME/.cache}/torchmetrics` into `/home/app/.torchmetrics`.
 - `utmos` persists model downloads by mounting the host cache path `${XDG_CACHE_HOME:-$HOME/.cache}` into `/home/app/.cache` and setting `UTMOSV2_CHACHE=/home/app/.cache/utmosv2` inside the runner container.
+- `audiobox` persists model downloads by mounting the host cache path `${XDG_CACHE_HOME:-$HOME/.cache}` into `/home/app/.cache` and using HF/Torch cache env vars inside the runner container.
 - Invalid or unreadable WAVs are skipped during file discovery.

@@ -74,33 +74,42 @@ def build_coalesced_rows(latest_summaries: dict[str, dict[str, dict[str, Any]]])
     for model in models:
         ctc_summary = latest_summaries.get("ctc", {}).get(model)
         dnsmos_summary = latest_summaries.get("dnsmos", {}).get(model)
+        nisqa_summary = latest_summaries.get("nisqa", {}).get(model)
         speaker_sim_summary = latest_summaries.get("speaker_sim", {}).get(model)
         utmos_summary = latest_summaries.get("utmos", {}).get(model)
+        audiobox_summary = latest_summaries.get("audiobox", {}).get(model)
 
         if (
             ctc_summary is None
             and dnsmos_summary is None
+            and nisqa_summary is None
             and speaker_sim_summary is None
             and utmos_summary is None
+            and audiobox_summary is None
         ):
             continue
 
-        base_summary = ctc_summary or dnsmos_summary or speaker_sim_summary or utmos_summary
+        base_summary = ctc_summary or dnsmos_summary or nisqa_summary or speaker_sim_summary or utmos_summary or audiobox_summary
         rows.append(
             {
                 "run_timestamp_utc": _max_timestamp(
                     ctc_summary,
                     dnsmos_summary,
+                    nisqa_summary,
                     speaker_sim_summary,
                     utmos_summary,
+                    audiobox_summary,
                 ),
                 "model": model,
                 "n_utts": base_summary["n_utts"],
                 "total_audio_sec": base_summary["total_audio_sec"],
                 "ctc_closeness_mean": ctc_summary["metric_mean"] if ctc_summary else None,
                 "dnsmos_ovrl_mean": dnsmos_summary["metric_mean"] if dnsmos_summary else None,
+                "nisqa_mos_mean": nisqa_summary["metric_mean"] if nisqa_summary else None,
                 "speaker_sim_ecapa_mean": speaker_sim_summary["metric_mean"] if speaker_sim_summary else None,
                 "utmos_mean": utmos_summary["metric_mean"] if utmos_summary else None,
+                "audiobox_ce_mean": audiobox_summary["ce_mean"] if audiobox_summary else None,
+                "audiobox_pq_mean": audiobox_summary["pq_mean"] if audiobox_summary else None,
             }
         )
 

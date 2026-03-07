@@ -24,8 +24,13 @@ def log_model_summary(metric_name: str, summary_payload: dict[str, Any]) -> None
     metric_value = summary_payload.get("metric_mean")
     if metric_value is None:
         metric_value = summary_payload.get("metric_value")
+    ce_mean = summary_payload.get("ce_mean")
+    pq_mean = summary_payload.get("pq_mean")
     error = summary_payload.get("error")
-    metric_display = "null" if metric_value is None else f"{metric_value:.6f}"
+    if metric_value is None and isinstance(ce_mean, (int, float)) and isinstance(pq_mean, (int, float)):
+        metric_display = f"ce={ce_mean:.6f},pq={pq_mean:.6f}"
+    else:
+        metric_display = "null" if metric_value is None else f"{metric_value:.6f}"
 
     parts = [
         f"[{metric_name}] done",

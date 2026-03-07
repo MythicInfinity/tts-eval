@@ -76,8 +76,11 @@ class CoalesceTests(unittest.TestCase):
                     "total_audio_sec": 2.0,
                     "ctc_closeness_mean": 0.7,
                     "dnsmos_ovrl_mean": None,
+                    "nisqa_mos_mean": None,
                     "speaker_sim_ecapa_mean": None,
                     "utmos_mean": None,
+                    "audiobox_ce_mean": None,
+                    "audiobox_pq_mean": None,
                 }
             ],
         )
@@ -106,8 +109,44 @@ class CoalesceTests(unittest.TestCase):
                     "total_audio_sec": 5.0,
                     "ctc_closeness_mean": None,
                     "dnsmos_ovrl_mean": 3.2,
+                    "nisqa_mos_mean": None,
                     "speaker_sim_ecapa_mean": None,
                     "utmos_mean": None,
+                    "audiobox_ce_mean": None,
+                    "audiobox_pq_mean": None,
+                }
+            ],
+        )
+
+    def test_build_coalesced_rows_merges_nisqa(self) -> None:
+        rows = build_coalesced_rows(
+            {
+                "nisqa": {
+                    "model_a": {
+                        "run_timestamp_utc": "2026-03-06T04:30:00Z",
+                        "model": "model_a",
+                        "n_utts": 3,
+                        "total_audio_sec": 5.0,
+                        "metric_mean": 3.8,
+                    }
+                }
+            }
+        )
+        self.assertEqual(
+            rows,
+            [
+                {
+                    "run_timestamp_utc": "2026-03-06T04:30:00Z",
+                    "model": "model_a",
+                    "n_utts": 3,
+                    "total_audio_sec": 5.0,
+                    "ctc_closeness_mean": None,
+                    "dnsmos_ovrl_mean": None,
+                    "nisqa_mos_mean": 3.8,
+                    "speaker_sim_ecapa_mean": None,
+                    "utmos_mean": None,
+                    "audiobox_ce_mean": None,
+                    "audiobox_pq_mean": None,
                 }
             ],
         )
@@ -136,8 +175,11 @@ class CoalesceTests(unittest.TestCase):
                     "total_audio_sec": 6.0,
                     "ctc_closeness_mean": None,
                     "dnsmos_ovrl_mean": None,
+                    "nisqa_mos_mean": None,
                     "speaker_sim_ecapa_mean": 0.92,
                     "utmos_mean": None,
+                    "audiobox_ce_mean": None,
+                    "audiobox_pq_mean": None,
                 }
             ],
         )
@@ -166,8 +208,45 @@ class CoalesceTests(unittest.TestCase):
                     "total_audio_sec": 7.5,
                     "ctc_closeness_mean": None,
                     "dnsmos_ovrl_mean": None,
+                    "nisqa_mos_mean": None,
                     "speaker_sim_ecapa_mean": None,
                     "utmos_mean": 4.15,
+                    "audiobox_ce_mean": None,
+                    "audiobox_pq_mean": None,
+                }
+            ],
+        )
+
+    def test_build_coalesced_rows_merges_audiobox(self) -> None:
+        rows = build_coalesced_rows(
+            {
+                "audiobox": {
+                    "model_a": {
+                        "run_timestamp_utc": "2026-03-06T06:30:00Z",
+                        "model": "model_a",
+                        "n_utts": 5,
+                        "total_audio_sec": 7.5,
+                        "ce_mean": 5.11,
+                        "pq_mean": 6.02,
+                    }
+                }
+            }
+        )
+        self.assertEqual(
+            rows,
+            [
+                {
+                    "run_timestamp_utc": "2026-03-06T06:30:00Z",
+                    "model": "model_a",
+                    "n_utts": 5,
+                    "total_audio_sec": 7.5,
+                    "ctc_closeness_mean": None,
+                    "dnsmos_ovrl_mean": None,
+                    "nisqa_mos_mean": None,
+                    "speaker_sim_ecapa_mean": None,
+                    "utmos_mean": None,
+                    "audiobox_ce_mean": 5.11,
+                    "audiobox_pq_mean": 6.02,
                 }
             ],
         )

@@ -48,6 +48,12 @@ PLOT_METRICS = (
         std_field="metric_std",
     ),
     PlotMetricSpec(
+        metric_dir="nisqa",
+        label="NISQA MOS",
+        value_field="metric_mean",
+        std_field="metric_std",
+    ),
+    PlotMetricSpec(
         metric_dir="speaker_sim",
         label="Speaker Similarity",
         value_field="metric_mean",
@@ -58,6 +64,18 @@ PLOT_METRICS = (
         label="UTMOS",
         value_field="metric_mean",
         std_field="metric_std",
+    ),
+    PlotMetricSpec(
+        metric_dir="audiobox",
+        label="Audiobox CE",
+        value_field="ce_mean",
+        std_field="ce_std",
+    ),
+    PlotMetricSpec(
+        metric_dir="audiobox",
+        label="Audiobox PQ",
+        value_field="pq_mean",
+        std_field="pq_std",
     ),
 )
 
