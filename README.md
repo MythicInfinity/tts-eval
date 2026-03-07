@@ -75,6 +75,12 @@ Tune UTMOS data loading workers (default `2`) via env var:
 UTMOS_NUM_WORKERS=8 eval/runners/utmos/d.sh
 ```
 
+Limit CPU thread fanout in numeric libs used by UTMOS preprocessing (default `1`):
+
+```bash
+UTMOS_CPU_THREADS=1 eval/runners/utmos/d.sh
+```
+
 If you see `Unexpected bus error encountered in worker` (shared memory exhaustion), increase Docker shm for UTMOS (default is `8g`):
 
 ```bash
@@ -85,6 +91,12 @@ To re-enable silence trimming (default is disabled), set:
 
 ```bash
 UTMOS_REMOVE_SILENT_SECTION=true eval/runners/utmos/d.sh
+```
+
+Optional speed knobs for UTMOS internals (may change score characteristics):
+
+```bash
+UTMOS_SPEC_MIXUP_INNER=false UTMOS_SPEC_NUM_FRAMES=1 eval/runners/utmos/d.sh
 ```
 
 Tune DNSMOS batch size (default `8`) via env var:

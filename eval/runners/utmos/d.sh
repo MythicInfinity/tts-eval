@@ -16,6 +16,9 @@ BATCH_SIZE="${UTMOS_BATCH_SIZE:-32}"
 SHM_SIZE="${UTMOS_SHM_SIZE:-8g}"
 REMOVE_SILENT_SECTION="${UTMOS_REMOVE_SILENT_SECTION:-false}"
 NUM_WORKERS="${UTMOS_NUM_WORKERS:-2}"
+CPU_THREADS="${UTMOS_CPU_THREADS:-1}"
+SPEC_MIXUP_INNER="${UTMOS_SPEC_MIXUP_INNER:-}"
+SPEC_NUM_FRAMES="${UTMOS_SPEC_NUM_FRAMES:-}"
 
 if [[ $# -gt 3 ]]; then
   echo "usage: d.sh [inputs_dir] [refs_dir] [timestamp]" >&2
@@ -54,6 +57,22 @@ docker_args=(
   TORCH_HOME=/home/app/.cache/torch
   -e
   UTMOSV2_CHACHE=/home/app/.cache/utmosv2
+  -e
+  OMP_NUM_THREADS="${CPU_THREADS}"
+  -e
+  MKL_NUM_THREADS="${CPU_THREADS}"
+  -e
+  OPENBLAS_NUM_THREADS="${CPU_THREADS}"
+  -e
+  NUMEXPR_NUM_THREADS="${CPU_THREADS}"
+  -e
+  VECLIB_MAXIMUM_THREADS="${CPU_THREADS}"
+  -e
+  BLIS_NUM_THREADS="${CPU_THREADS}"
+  -e
+  NUMBA_NUM_THREADS="${CPU_THREADS}"
+  -e
+  TORCH_NUM_THREADS="${CPU_THREADS}"
   -v
   "${APP_DIR}:/app"
   -v
@@ -83,6 +102,12 @@ docker_args=(
 
 if [[ -n "${TIMESTAMP}" ]]; then
   docker_args+=(--timestamp "${TIMESTAMP}")
+fi
+if [[ -n "${SPEC_MIXUP_INNER}" ]]; then
+  docker_args+=(--spec-mixup-inner "${SPEC_MIXUP_INNER}")
+fi
+if [[ -n "${SPEC_NUM_FRAMES}" ]]; then
+  docker_args+=(--spec-num-frames "${SPEC_NUM_FRAMES}")
 fi
 
 docker run "${docker_args[@]}"

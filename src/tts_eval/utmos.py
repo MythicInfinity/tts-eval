@@ -5,6 +5,7 @@ import math
 import platform
 import random
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -260,7 +261,7 @@ def score_wav_batch(wav_paths: list[Path], model_dir: Path, runtime: UTMOSRuntim
             num_repetitions=runtime.num_repetitions,
             predict_dataset=runtime.predict_dataset,
             remove_silent_section=runtime.remove_silent_section,
-            verbose=False,
+            verbose=True,
         )
         return extract_batch_predictions(prediction, alias_to_original, wav_paths)
     finally:
@@ -361,7 +362,7 @@ def evaluate_model(
     scan_valid_count = 0
     scan_skip_count = 0
     scan_fail_count = 0
-    score_chunk_size = max(batch_size, min(256, batch_size * 8))
+    scan_start_time = time.perf_counter()
 
     def append_record(record: MetricRecord) -> None:
         records.append(record)
@@ -426,72 +427,75 @@ def evaluate_model(
             scan_progress_bar.close()
             scan_progress_bar = None
 
+        scan_elapsed_sec = time.perf_counter() - scan_start_time
+        print(
+            f"[utmos] scan_done model={model} total={n_utts} "
+            f"valid={scan_valid_count} skip={scan_skip_count} fail={scan_fail_count} "
+            f"sec={scan_elapsed_sec:.2f}",
+            flush=True,
+        )
+
         if valid_utterances:
-            score_progress_bar = _build_progress_bar(f"[utmos] score model={model}", len(valid_utterances))
-            score_ok_count = 0
-            score_fail_count = 0
-            for chunk_start in range(0, len(valid_utterances), score_chunk_size):
-                chunk = valid_utterances[chunk_start : chunk_start + score_chunk_size]
-                chunk_wav_paths = [utterance.wav_path for utterance in chunk]
-                scores_by_path, errors_by_path = score_wav_batch_resilient(
-                    chunk_wav_paths,
-                    model_dir,
-                    runtime,
-                    batch_size=batch_size,
-                    num_workers=num_workers,
-                )
-                for utterance in chunk:
-                    normalized_path = _normalize_path_key(utterance.wav_path)
-                    if normalized_path in scores_by_path:
-                        append_record(
-                            MetricRecord(
-                                run_timestamp_utc=run_timestamp_utc,
-                                metric_name="utmos",
-                                metric_version=runtime.metric_version,
-                                model=model,
-                                utt_id=utterance.utt_id,
-                                wav_path=str(utterance.wav_path),
-                                metric_value=scores_by_path[normalized_path],
-                                status="ok",
-                                error=None,
-                            )
+            valid_wav_paths = [utterance.wav_path for utterance in valid_utterances]
+            score_start_time = time.perf_counter()
+            scores_by_path, errors_by_path = score_wav_batch_resilient(
+                valid_wav_paths,
+                model_dir,
+                runtime,
+                batch_size=batch_size,
+                num_workers=num_workers,
+            )
+            score_elapsed_sec = time.perf_counter() - score_start_time
+            score_utt_per_sec = len(valid_utterances) / score_elapsed_sec if score_elapsed_sec > 0 else 0.0
+            print(
+                f"[utmos] score_done model={model} valid={len(valid_utterances)} "
+                f"sec={score_elapsed_sec:.2f} utt_per_sec={score_utt_per_sec:.2f}",
+                flush=True,
+            )
+            for utterance in valid_utterances:
+                normalized_path = _normalize_path_key(utterance.wav_path)
+                if normalized_path in scores_by_path:
+                    append_record(
+                        MetricRecord(
+                            run_timestamp_utc=run_timestamp_utc,
+                            metric_name="utmos",
+                            metric_version=runtime.metric_version,
+                            model=model,
+                            utt_id=utterance.utt_id,
+                            wav_path=str(utterance.wav_path),
+                            metric_value=scores_by_path[normalized_path],
+                            status="ok",
+                            error=None,
                         )
-                        score_ok_count += 1
-                    elif normalized_path in errors_by_path:
-                        append_record(
-                            MetricRecord(
-                                run_timestamp_utc=run_timestamp_utc,
-                                metric_name="utmos",
-                                metric_version=runtime.metric_version,
-                                model=model,
-                                utt_id=utterance.utt_id,
-                                wav_path=str(utterance.wav_path),
-                                metric_value=None,
-                                status="fail",
-                                error=errors_by_path[normalized_path],
-                            )
+                    )
+                elif normalized_path in errors_by_path:
+                    append_record(
+                        MetricRecord(
+                            run_timestamp_utc=run_timestamp_utc,
+                            metric_name="utmos",
+                            metric_version=runtime.metric_version,
+                            model=model,
+                            utt_id=utterance.utt_id,
+                            wav_path=str(utterance.wav_path),
+                            metric_value=None,
+                            status="fail",
+                            error=errors_by_path[normalized_path],
                         )
-                        score_fail_count += 1
-                    else:  # pragma: no cover - defensive guard if resilient scoring returns an incomplete mapping
-                        append_record(
-                            MetricRecord(
-                                run_timestamp_utc=run_timestamp_utc,
-                                metric_name="utmos",
-                                metric_version=runtime.metric_version,
-                                model=model,
-                                utt_id=utterance.utt_id,
-                                wav_path=str(utterance.wav_path),
-                                metric_value=None,
-                                status="fail",
-                                error="utmos batch scoring did not return a result for this utterance",
-                            )
+                    )
+                else:  # pragma: no cover - defensive guard if resilient scoring returns an incomplete mapping
+                    append_record(
+                        MetricRecord(
+                            run_timestamp_utc=run_timestamp_utc,
+                            metric_name="utmos",
+                            metric_version=runtime.metric_version,
+                            model=model,
+                            utt_id=utterance.utt_id,
+                            wav_path=str(utterance.wav_path),
+                            metric_value=None,
+                            status="fail",
+                            error="utmos batch scoring did not return a result for this utterance",
                         )
-                        score_fail_count += 1
-                    if score_progress_bar is not None:
-                        score_progress_bar.update(1)
-                        score_progress_bar.set_postfix(ok=score_ok_count, fail=score_fail_count, refresh=False)
-            if score_progress_bar is not None:
-                score_progress_bar.close()
+                    )
     finally:
         if scan_progress_bar is not None:
             scan_progress_bar.close()

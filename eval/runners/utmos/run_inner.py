@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -39,6 +40,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--num-workers", type=int, default=2)
     parser.add_argument("--remove-silent-section", type=_parse_bool, default=False)
+    parser.add_argument("--spec-mixup-inner", type=_parse_bool, default=None)
+    parser.add_argument("--spec-num-frames", type=int, default=None)
     parser.add_argument("--device", type=str, default="cuda:0")
     return parser.parse_args()
 
@@ -55,6 +58,34 @@ def main() -> int:
     runtime = load_utmos_runtime(
         execution_device=args.device,
         remove_silent_section=args.remove_silent_section,
+    )
+    cfg = runtime.model._cfg
+    dataset_cfg = getattr(cfg, "dataset", None)
+    spec_frames_cfg = getattr(dataset_cfg, "spec_frames", None)
+    if spec_frames_cfg is not None:
+        if args.spec_mixup_inner is not None:
+            spec_frames_cfg.mixup_inner = args.spec_mixup_inner
+        if args.spec_num_frames is not None:
+            if args.spec_num_frames < 1:
+                raise ValueError("--spec-num-frames must be >= 1")
+            spec_frames_cfg.num_frames = args.spec_num_frames
+
+    specs = list(getattr(dataset_cfg, "specs", []) or [])
+    num_specs = len(specs)
+    num_frames = int(getattr(spec_frames_cfg, "num_frames", 1) or 1)
+    mixup_inner = bool(getattr(spec_frames_cfg, "mixup_inner", False))
+    estimated_spec_passes = num_specs * num_frames * (2 if mixup_inner else 1)
+    print(
+        f"[utmos] config dataset={getattr(dataset_cfg, 'name', 'unknown')} "
+        f"specs={num_specs} spec_num_frames={num_frames} "
+        f"spec_mixup_inner={str(mixup_inner).lower()} "
+        f"est_melspec_passes_per_utt={estimated_spec_passes}",
+        flush=True,
+    )
+    print(
+        f"[utmos] runtime batch_size={args.batch_size} num_workers={args.num_workers} "
+        f"torch_num_threads={os.environ.get('TORCH_NUM_THREADS', 'unset')}",
+        flush=True,
     )
     print(f"[utmos] runtime ready device={runtime.execution_device}", flush=True)
     models = iter_models(args.inputs)
@@ -96,6 +127,9 @@ def main() -> int:
         metadata_payload["batch_size"] = args.batch_size
         metadata_payload["num_workers"] = args.num_workers
         metadata_payload["remove_silent_section"] = args.remove_silent_section
+        metadata_payload["spec_mixup_inner"] = mixup_inner
+        metadata_payload["spec_num_frames"] = num_frames
+        metadata_payload["estimated_melspec_passes_per_utt"] = estimated_spec_passes
         write_json(model_output_dir / f"summary_{timestamp_for_filename}.json", summary_payload)
         write_jsonl(model_output_dir / f"per_utt_{timestamp_for_filename}.jsonl", records)
         write_json(model_output_dir / f"metadata_{timestamp_for_filename}.json", metadata_payload)
