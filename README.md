@@ -5,6 +5,7 @@ This repo runs automated TTS evals against a generated `inputs/` tree and a shar
 Current runners:
 
 - `ctc`: transcript-faithfulness via `torchaudio` `WAV2VEC2_ASR_LARGE_960H`
+- `ctc_tortoise`: transcript-faithfulness via `jbetker/wav2vec2-large-robust-ft-libritts-voxpopuli` with the Tortoise tokenizer/cleaners
 - `dnsmos`: no-reference quality proxy via TorchMetrics DNSMOS overall
 - `nisqa`: no-reference MOS proxy via TorchMetrics NISQA MOS
 - `speaker_sim`: per-utterance speaker similarity via batched SpeechBrain ECAPA embeddings
@@ -45,6 +46,12 @@ Run CTC:
 
 ```bash
 eval/runners/ctc/d.sh
+```
+
+Run Tortoise-backed CTC:
+
+```bash
+eval/runners/ctc_tortoise/d.sh
 ```
 
 Run DNSMOS:
@@ -161,6 +168,12 @@ Optional Audiobox runtime tuning:
 AUDIOBOX_DEVICE=cuda:1 eval/runners/audiobox/d.sh
 ```
 
+Optional Tortoise CTC runtime tuning:
+
+```bash
+TORTOISE_CTC_DEVICE=cuda eval/runners/ctc_tortoise/d.sh
+```
+
 By default, all eval launchers use:
 
 - `data/inputs`
@@ -195,6 +208,7 @@ scripts/run_all.sh
 This currently runs:
 
 - `ctc`
+- `ctc_tortoise`
 - `dnsmos`
 - `nisqa`
 - `speaker_sim`
@@ -206,6 +220,7 @@ This currently runs:
 Runner outputs are written under the repo-level `data/evals/` tree:
 
 - `data/evals/ctc/<model>/...`
+- `data/evals/ctc_tortoise/<model>/...`
 - `data/evals/dnsmos/<model>/...`
 - `data/evals/nisqa/<model>/...`
 - `data/evals/speaker_sim/<model>/...`
@@ -218,6 +233,10 @@ Each runner writes timestamped JSON artifacts per model:
 - `metadata_<timestamp>.json`
 
 The `ctc` runner also writes:
+
+- `per_utt_<timestamp>.jsonl`
+
+The `ctc_tortoise` runner also writes:
 
 - `per_utt_<timestamp>.jsonl`
 
@@ -252,6 +271,7 @@ python3 scripts/coalesce_jsons.py --eval-root . --output data/evals/coalesced_su
 The coalesced file contains one object per model and currently includes:
 
 - `ctc_closeness_mean`
+- `ctc_tortoise_closeness_mean`
 - `dnsmos_ovrl_mean`
 - `nisqa_mos_mean`
 - `speaker_sim_ecapa_mean`
@@ -281,7 +301,7 @@ scripts/plot_eval_means/d.sh --eval-root . --output data/evals/mean_eval_plot.pn
 
 The plot uses:
 
-- `metric_mean` for utterance-level metrics such as `ctc` and `dnsmos`
+- `metric_mean` for utterance-level metrics such as `ctc`, `ctc_tortoise`, and `dnsmos`
 - `metric_mean` for utterance-level metrics such as `nisqa`
 - `metric_mean` for utterance-level metrics such as `speaker_sim`
 - `metric_mean` for utterance-level metrics such as `utmos`
@@ -292,6 +312,7 @@ The plot uses:
 ## Notes
 
 - `ctc` requires Docker with GPU access because the runner uses `--gpus all`.
+- `ctc_tortoise` uses the Tortoise-author ASR checkpoint `jbetker/wav2vec2-large-robust-ft-libritts-voxpopuli`, applies the Tortoise `english_cleaners`-style transcript normalization, and records the same `exp(-ctc_loss/target_len)` closeness transform as the stock `ctc` runner.
 - `dnsmos` uses the TorchMetrics functional DNSMOS API and records only the overall MOS-like output.
 - `nisqa` uses the TorchMetrics functional NISQA API and records only the MOS output.
 - `speaker_sim` uses `speechbrain/spkrec-ecapa-voxceleb`, averages all reference embeddings per speaker, then scores each generated utterance with cosine similarity against that speaker centroid.

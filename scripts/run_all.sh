@@ -17,6 +17,7 @@ TIMESTAMP="${3:-}"
 
 cd "${REPO_ROOT}"
 "${REPO_ROOT}/eval/runners/ctc/d.sh" "${INPUTS_DIR}" "${REFS_DIR}" "${TIMESTAMP}"
+"${REPO_ROOT}/eval/runners/ctc_tortoise/d.sh" "${INPUTS_DIR}" "${REFS_DIR}" "${TIMESTAMP}"
 "${REPO_ROOT}/eval/runners/dnsmos/d.sh" "${INPUTS_DIR}" "${REFS_DIR}" "${TIMESTAMP}"
 "${REPO_ROOT}/eval/runners/nisqa/d.sh" "${INPUTS_DIR}" "${REFS_DIR}" "${TIMESTAMP}"
 "${REPO_ROOT}/eval/runners/speaker_sim/d.sh" "${INPUTS_DIR}" "${REFS_DIR}" "${TIMESTAMP}"

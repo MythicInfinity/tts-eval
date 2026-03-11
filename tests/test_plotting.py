@@ -14,6 +14,10 @@ class PlottingTests(unittest.TestCase):
                     "model_a": {"metric_mean": 0.91, "metric_std": 0.03},
                     "model_b": {"metric_mean": 0.88, "metric_std": 0.02},
                 },
+                "ctc_tortoise": {
+                    "model_a": {"metric_mean": 0.89, "metric_std": 0.02},
+                    "model_b": {"metric_mean": 0.84, "metric_std": 0.01},
+                },
                 "dnsmos": {
                     "model_a": {"metric_mean": 3.4, "metric_std": 0.1},
                 },
@@ -39,6 +43,7 @@ class PlottingTests(unittest.TestCase):
         self.assertEqual(models, ["model_a", "model_b"])
         self.assertEqual([item.label for item in series], [
             "CTC Closeness",
+            "Tortoise CTC Closeness",
             "DNSMOS Overall",
             "NISQA MOS",
             "Speaker Similarity",
@@ -49,6 +54,7 @@ class PlottingTests(unittest.TestCase):
         by_label = {item.label: item for item in series}
 
         self.assertEqual(by_label["CTC Closeness"].values_by_model, {"model_a": 0.91, "model_b": 0.88})
+        self.assertEqual(by_label["Tortoise CTC Closeness"].values_by_model, {"model_a": 0.89, "model_b": 0.84})
         self.assertEqual(by_label["DNSMOS Overall"].values_by_model, {"model_a": 3.4})
         self.assertEqual(by_label["NISQA MOS"].values_by_model, {"model_a": 3.9, "model_b": 3.7})
         self.assertEqual(by_label["Speaker Similarity"].values_by_model, {"model_a": 0.82, "model_b": 0.78})
@@ -61,6 +67,9 @@ class PlottingTests(unittest.TestCase):
             {
                 "ctc": {
                     "model_a": {"metric_mean": None, "metric_std": 0.03},
+                },
+                "ctc_tortoise": {
+                    "model_a": {"metric_mean": None, "metric_std": 0.02},
                 },
                 "dnsmos": {
                     "model_a": {"metric_mean": "bad", "metric_std": 0.1},
@@ -91,6 +100,10 @@ class PlottingTests(unittest.TestCase):
                     "model_a": {"metric_mean": 0.91, "metric_std": 0.03},
                     "model_b": {"metric_mean": 0.88, "metric_std": 0.02},
                 },
+                "ctc_tortoise": {
+                    "model_a": {"metric_mean": 0.89, "metric_std": 0.02},
+                    "model_b": {"metric_mean": 0.84, "metric_std": 0.01},
+                },
                 "dnsmos": {
                     "model_a": {"metric_mean": 3.4, "metric_std": 0.1},
                 },
@@ -119,6 +132,7 @@ class PlottingTests(unittest.TestCase):
             grouped.group_labels,
             [
                 "CTC Closeness",
+                "Tortoise CTC Closeness",
                 "DNSMOS Overall",
                 "NISQA MOS",
                 "Speaker Similarity",
@@ -128,12 +142,13 @@ class PlottingTests(unittest.TestCase):
             ],
         )
         self.assertEqual(grouped.bar_labels, ["model_a", "model_b"])
-        self.assertEqual(grouped.values_by_bar[0], [0.91, 3.4, 3.9, 0.82, 4.1, 5.2, 6.1])
-        self.assertEqual(grouped.std_by_bar[0], [0.03, 0.1, 0.2, 0.04, 0.12, 0.3, 0.4])
+        self.assertEqual(grouped.values_by_bar[0], [0.91, 0.89, 3.4, 3.9, 0.82, 4.1, 5.2, 6.1])
+        self.assertEqual(grouped.std_by_bar[0], [0.03, 0.02, 0.1, 0.2, 0.04, 0.12, 0.3, 0.4])
         self.assertEqual(grouped.values_by_bar[1][0], 0.88)
-        self.assertTrue(math.isnan(grouped.values_by_bar[1][1]))
-        self.assertEqual(grouped.values_by_bar[1][2:], [3.7, 0.78, 4.0, 5.0, 5.8])
-        self.assertEqual(grouped.std_by_bar[1], [0.02, 0.0, 0.1, 0.03, 0.08, 0.2, 0.3])
+        self.assertEqual(grouped.values_by_bar[1][1], 0.84)
+        self.assertTrue(math.isnan(grouped.values_by_bar[1][2]))
+        self.assertEqual(grouped.values_by_bar[1][3:], [3.7, 0.78, 4.0, 5.0, 5.8])
+        self.assertEqual(grouped.std_by_bar[1], [0.02, 0.01, 0.0, 0.1, 0.03, 0.08, 0.2, 0.3])
         self.assertEqual(grouped.x_axis_label, "Eval Metric")
         self.assertEqual(grouped.legend_title, "Model")
 
@@ -143,6 +158,10 @@ class PlottingTests(unittest.TestCase):
                 "ctc": {
                     "model_a": {"metric_mean": 0.91, "metric_std": 0.03},
                     "model_b": {"metric_mean": 0.88, "metric_std": 0.02},
+                },
+                "ctc_tortoise": {
+                    "model_a": {"metric_mean": 0.89, "metric_std": 0.02},
+                    "model_b": {"metric_mean": 0.84, "metric_std": 0.01},
                 },
                 "dnsmos": {
                     "model_a": {"metric_mean": 3.4, "metric_std": 0.1},
@@ -173,6 +192,7 @@ class PlottingTests(unittest.TestCase):
             grouped.bar_labels,
             [
                 "CTC Closeness",
+                "Tortoise CTC Closeness",
                 "DNSMOS Overall",
                 "NISQA MOS",
                 "Speaker Similarity",
@@ -183,19 +203,21 @@ class PlottingTests(unittest.TestCase):
         )
         self.assertEqual(grouped.values_by_bar[0], [0.91, 0.88])
         self.assertEqual(grouped.std_by_bar[0], [0.03, 0.02])
-        self.assertEqual(grouped.values_by_bar[1][0], 3.4)
-        self.assertTrue(math.isnan(grouped.values_by_bar[1][1]))
-        self.assertEqual(grouped.std_by_bar[1], [0.1, 0.0])
-        self.assertEqual(grouped.values_by_bar[2], [3.9, 3.7])
-        self.assertEqual(grouped.std_by_bar[2], [0.2, 0.1])
-        self.assertEqual(grouped.values_by_bar[3], [0.82, 0.78])
-        self.assertEqual(grouped.std_by_bar[3], [0.04, 0.03])
-        self.assertEqual(grouped.values_by_bar[4], [4.1, 4.0])
-        self.assertEqual(grouped.std_by_bar[4], [0.12, 0.08])
-        self.assertEqual(grouped.values_by_bar[5], [5.2, 5.0])
-        self.assertEqual(grouped.std_by_bar[5], [0.3, 0.2])
-        self.assertEqual(grouped.values_by_bar[6], [6.1, 5.8])
-        self.assertEqual(grouped.std_by_bar[6], [0.4, 0.3])
+        self.assertEqual(grouped.values_by_bar[1], [0.89, 0.84])
+        self.assertEqual(grouped.std_by_bar[1], [0.02, 0.01])
+        self.assertEqual(grouped.values_by_bar[2][0], 3.4)
+        self.assertTrue(math.isnan(grouped.values_by_bar[2][1]))
+        self.assertEqual(grouped.std_by_bar[2], [0.1, 0.0])
+        self.assertEqual(grouped.values_by_bar[3], [3.9, 3.7])
+        self.assertEqual(grouped.std_by_bar[3], [0.2, 0.1])
+        self.assertEqual(grouped.values_by_bar[4], [0.82, 0.78])
+        self.assertEqual(grouped.std_by_bar[4], [0.04, 0.03])
+        self.assertEqual(grouped.values_by_bar[5], [4.1, 4.0])
+        self.assertEqual(grouped.std_by_bar[5], [0.12, 0.08])
+        self.assertEqual(grouped.values_by_bar[6], [5.2, 5.0])
+        self.assertEqual(grouped.std_by_bar[6], [0.3, 0.2])
+        self.assertEqual(grouped.values_by_bar[7], [6.1, 5.8])
+        self.assertEqual(grouped.std_by_bar[7], [0.4, 0.3])
         self.assertEqual(grouped.x_axis_label, "Model")
         self.assertEqual(grouped.legend_title, "Eval Metric")
 

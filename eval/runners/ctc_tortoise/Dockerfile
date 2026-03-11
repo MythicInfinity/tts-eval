@@ -1,0 +1,25 @@
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app/src
+ENV HOME=/home/app
+ENV XDG_CACHE_HOME=/home/app/.cache
+ENV HF_HOME=/home/app/.cache/huggingface
+ENV TORCH_HOME=/home/app/.cache/torch
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /home/app/.cache /app/data \
+    && chmod -R 0777 /home/app /app/data
+
+RUN pip install --no-cache-dir \
+    torchaudio==2.5.1 \
+    soundfile==0.12.1 \
+    transformers==4.46.3 \
+    inflect==7.4.0 \
+    Unidecode==1.3.8

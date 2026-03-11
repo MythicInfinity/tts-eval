@@ -75,6 +75,41 @@ class CoalesceTests(unittest.TestCase):
                     "n_utts": 2,
                     "total_audio_sec": 2.0,
                     "ctc_closeness_mean": 0.7,
+                    "ctc_tortoise_closeness_mean": None,
+                    "dnsmos_ovrl_mean": None,
+                    "nisqa_mos_mean": None,
+                    "speaker_sim_ecapa_mean": None,
+                    "utmos_mean": None,
+                    "audiobox_ce_mean": None,
+                    "audiobox_pq_mean": None,
+                }
+            ],
+        )
+
+    def test_build_coalesced_rows_merges_tortoise_ctc(self) -> None:
+        rows = build_coalesced_rows(
+            {
+                "ctc_tortoise": {
+                    "model_a": {
+                        "run_timestamp_utc": "2026-03-06T03:00:00Z",
+                        "model": "model_a",
+                        "n_utts": 2,
+                        "total_audio_sec": 2.0,
+                        "metric_mean": 0.81,
+                    }
+                }
+            }
+        )
+        self.assertEqual(
+            rows,
+            [
+                {
+                    "run_timestamp_utc": "2026-03-06T03:00:00Z",
+                    "model": "model_a",
+                    "n_utts": 2,
+                    "total_audio_sec": 2.0,
+                    "ctc_closeness_mean": None,
+                    "ctc_tortoise_closeness_mean": 0.81,
                     "dnsmos_ovrl_mean": None,
                     "nisqa_mos_mean": None,
                     "speaker_sim_ecapa_mean": None,
@@ -108,6 +143,7 @@ class CoalesceTests(unittest.TestCase):
                     "n_utts": 3,
                     "total_audio_sec": 5.0,
                     "ctc_closeness_mean": None,
+                    "ctc_tortoise_closeness_mean": None,
                     "dnsmos_ovrl_mean": 3.2,
                     "nisqa_mos_mean": None,
                     "speaker_sim_ecapa_mean": None,
@@ -141,6 +177,7 @@ class CoalesceTests(unittest.TestCase):
                     "n_utts": 3,
                     "total_audio_sec": 5.0,
                     "ctc_closeness_mean": None,
+                    "ctc_tortoise_closeness_mean": None,
                     "dnsmos_ovrl_mean": None,
                     "nisqa_mos_mean": 3.8,
                     "speaker_sim_ecapa_mean": None,
@@ -174,6 +211,7 @@ class CoalesceTests(unittest.TestCase):
                     "n_utts": 4,
                     "total_audio_sec": 6.0,
                     "ctc_closeness_mean": None,
+                    "ctc_tortoise_closeness_mean": None,
                     "dnsmos_ovrl_mean": None,
                     "nisqa_mos_mean": None,
                     "speaker_sim_ecapa_mean": 0.92,
@@ -207,6 +245,7 @@ class CoalesceTests(unittest.TestCase):
                     "n_utts": 5,
                     "total_audio_sec": 7.5,
                     "ctc_closeness_mean": None,
+                    "ctc_tortoise_closeness_mean": None,
                     "dnsmos_ovrl_mean": None,
                     "nisqa_mos_mean": None,
                     "speaker_sim_ecapa_mean": None,
@@ -241,6 +280,7 @@ class CoalesceTests(unittest.TestCase):
                     "n_utts": 5,
                     "total_audio_sec": 7.5,
                     "ctc_closeness_mean": None,
+                    "ctc_tortoise_closeness_mean": None,
                     "dnsmos_ovrl_mean": None,
                     "nisqa_mos_mean": None,
                     "speaker_sim_ecapa_mean": None,

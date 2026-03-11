@@ -73,6 +73,7 @@ def build_coalesced_rows(latest_summaries: dict[str, dict[str, dict[str, Any]]])
 
     for model in models:
         ctc_summary = latest_summaries.get("ctc", {}).get(model)
+        ctc_tortoise_summary = latest_summaries.get("ctc_tortoise", {}).get(model)
         dnsmos_summary = latest_summaries.get("dnsmos", {}).get(model)
         nisqa_summary = latest_summaries.get("nisqa", {}).get(model)
         speaker_sim_summary = latest_summaries.get("speaker_sim", {}).get(model)
@@ -81,6 +82,7 @@ def build_coalesced_rows(latest_summaries: dict[str, dict[str, dict[str, Any]]])
 
         if (
             ctc_summary is None
+            and ctc_tortoise_summary is None
             and dnsmos_summary is None
             and nisqa_summary is None
             and speaker_sim_summary is None
@@ -89,11 +91,20 @@ def build_coalesced_rows(latest_summaries: dict[str, dict[str, dict[str, Any]]])
         ):
             continue
 
-        base_summary = ctc_summary or dnsmos_summary or nisqa_summary or speaker_sim_summary or utmos_summary or audiobox_summary
+        base_summary = (
+            ctc_summary
+            or ctc_tortoise_summary
+            or dnsmos_summary
+            or nisqa_summary
+            or speaker_sim_summary
+            or utmos_summary
+            or audiobox_summary
+        )
         rows.append(
             {
                 "run_timestamp_utc": _max_timestamp(
                     ctc_summary,
+                    ctc_tortoise_summary,
                     dnsmos_summary,
                     nisqa_summary,
                     speaker_sim_summary,
@@ -104,6 +115,7 @@ def build_coalesced_rows(latest_summaries: dict[str, dict[str, dict[str, Any]]])
                 "n_utts": base_summary["n_utts"],
                 "total_audio_sec": base_summary["total_audio_sec"],
                 "ctc_closeness_mean": ctc_summary["metric_mean"] if ctc_summary else None,
+                "ctc_tortoise_closeness_mean": ctc_tortoise_summary["metric_mean"] if ctc_tortoise_summary else None,
                 "dnsmos_ovrl_mean": dnsmos_summary["metric_mean"] if dnsmos_summary else None,
                 "nisqa_mos_mean": nisqa_summary["metric_mean"] if nisqa_summary else None,
                 "speaker_sim_ecapa_mean": speaker_sim_summary["metric_mean"] if speaker_sim_summary else None,

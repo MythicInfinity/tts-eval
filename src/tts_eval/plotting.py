@@ -42,6 +42,12 @@ PLOT_METRICS = (
         std_field="metric_std",
     ),
     PlotMetricSpec(
+        metric_dir="ctc_tortoise",
+        label="Tortoise CTC Closeness",
+        value_field="metric_mean",
+        std_field="metric_std",
+    ),
+    PlotMetricSpec(
         metric_dir="dnsmos",
         label="DNSMOS Overall",
         value_field="metric_mean",
