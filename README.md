@@ -281,16 +281,10 @@ The coalesced file contains one object per model and currently includes:
 
 ## Plotting Mean Results
 
-Generate a grouped bar chart of the latest mean evals, grouped by eval metric with one bar per model:
+Generate a styled combined figure of the latest mean evals with one subplot per metric:
 
 ```bash
 scripts/plot_eval_means/d.sh --eval-root . --output data/evals/mean_eval_plot.png
-```
-
-Use the previous layout with evals grouped under each model:
-
-```bash
-scripts/plot_eval_means/d.sh --eval-root . --output data/evals/mean_eval_plot.png --group-by-model
 ```
 
 Add stddev error bars where the metric exposes `metric_std`:
@@ -299,7 +293,14 @@ Add stddev error bars where the metric exposes `metric_std`:
 scripts/plot_eval_means/d.sh --eval-root . --output data/evals/mean_eval_plot.png --include-stddev
 ```
 
-The plot uses:
+The plotting command writes:
+
+- a combined PNG at the requested output path
+- a matching combined SVG alongside it
+- one standalone PNG per metric under `data/evals/mean_eval_plot_metrics/`
+- one standalone SVG per metric under `data/evals/mean_eval_plot_metrics/`
+
+The plots use:
 
 - `metric_mean` for utterance-level metrics such as `ctc`, `ctc_tortoise`, and `dnsmos`
 - `metric_mean` for utterance-level metrics such as `nisqa`
@@ -307,7 +308,9 @@ The plot uses:
 - `metric_mean` for utterance-level metrics such as `utmos`
 - `ce_mean` and `pq_mean` for `audiobox`
 - mean values only, never median values
+- a separate y-scale per metric subplot so mixed metric ranges are not forced onto one axis
 - the plotting command runs fully inside Docker; no host venv or system Python packages are required
+- `--group-by-model` is retained as a deprecated no-op for backward compatibility
 
 ## Notes
 

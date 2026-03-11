@@ -1,44 +1,52 @@
 from __future__ import annotations
 
 import math
+from pathlib import Path
+import tempfile
 import unittest
 
-from tts_eval.plotting import build_grouped_plot_data, build_plot_series
+from tts_eval.plotting import (
+    build_grouped_plot_data,
+    build_metric_plot_data,
+    build_plot_series,
+    render_mean_plot_outputs,
+)
+
+
+SAMPLE_SUMMARIES = {
+    "ctc": {
+        "model_a": {"metric_mean": 0.91, "metric_std": 0.03},
+        "model_b": {"metric_mean": 0.88, "metric_std": 0.02},
+    },
+    "ctc_tortoise": {
+        "model_a": {"metric_mean": 0.89, "metric_std": 0.02},
+        "model_b": {"metric_mean": 0.84, "metric_std": 0.01},
+    },
+    "dnsmos": {
+        "model_a": {"metric_mean": 3.4, "metric_std": 0.1},
+    },
+    "nisqa": {
+        "model_a": {"metric_mean": 3.9, "metric_std": 0.2},
+        "model_b": {"metric_mean": 3.7, "metric_std": 0.1},
+    },
+    "speaker_sim": {
+        "model_a": {"metric_mean": 0.82, "metric_std": 0.04},
+        "model_b": {"metric_mean": 0.78, "metric_std": 0.03},
+    },
+    "utmos": {
+        "model_a": {"metric_mean": 4.1, "metric_std": 0.12},
+        "model_b": {"metric_mean": 4.0, "metric_std": 0.08},
+    },
+    "audiobox": {
+        "model_a": {"ce_mean": 5.2, "ce_std": 0.3, "pq_mean": 6.1, "pq_std": 0.4},
+        "model_b": {"ce_mean": 5.0, "ce_std": 0.2, "pq_mean": 5.8, "pq_std": 0.3},
+    },
+}
 
 
 class PlottingTests(unittest.TestCase):
     def test_build_plot_series_uses_means(self) -> None:
-        models, series = build_plot_series(
-            {
-                "ctc": {
-                    "model_a": {"metric_mean": 0.91, "metric_std": 0.03},
-                    "model_b": {"metric_mean": 0.88, "metric_std": 0.02},
-                },
-                "ctc_tortoise": {
-                    "model_a": {"metric_mean": 0.89, "metric_std": 0.02},
-                    "model_b": {"metric_mean": 0.84, "metric_std": 0.01},
-                },
-                "dnsmos": {
-                    "model_a": {"metric_mean": 3.4, "metric_std": 0.1},
-                },
-                "nisqa": {
-                    "model_a": {"metric_mean": 3.9, "metric_std": 0.2},
-                    "model_b": {"metric_mean": 3.7, "metric_std": 0.1},
-                },
-                "speaker_sim": {
-                    "model_a": {"metric_mean": 0.82, "metric_std": 0.04},
-                    "model_b": {"metric_mean": 0.78, "metric_std": 0.03},
-                },
-                "utmos": {
-                    "model_a": {"metric_mean": 4.1, "metric_std": 0.12},
-                    "model_b": {"metric_mean": 4.0, "metric_std": 0.08},
-                },
-                "audiobox": {
-                    "model_a": {"ce_mean": 5.2, "ce_std": 0.3, "pq_mean": 6.1, "pq_std": 0.4},
-                    "model_b": {"ce_mean": 5.0, "ce_std": 0.2, "pq_mean": 5.8, "pq_std": 0.3},
-                },
-            }
-        )
+        models, series = build_plot_series(SAMPLE_SUMMARIES)
 
         self.assertEqual(models, ["model_a", "model_b"])
         self.assertEqual([item.label for item in series], [
@@ -94,37 +102,7 @@ class PlottingTests(unittest.TestCase):
             self.assertEqual(item.values_by_model, {})
 
     def test_build_grouped_plot_data_groups_by_metric_by_default(self) -> None:
-        models, series = build_plot_series(
-            {
-                "ctc": {
-                    "model_a": {"metric_mean": 0.91, "metric_std": 0.03},
-                    "model_b": {"metric_mean": 0.88, "metric_std": 0.02},
-                },
-                "ctc_tortoise": {
-                    "model_a": {"metric_mean": 0.89, "metric_std": 0.02},
-                    "model_b": {"metric_mean": 0.84, "metric_std": 0.01},
-                },
-                "dnsmos": {
-                    "model_a": {"metric_mean": 3.4, "metric_std": 0.1},
-                },
-                "nisqa": {
-                    "model_a": {"metric_mean": 3.9, "metric_std": 0.2},
-                    "model_b": {"metric_mean": 3.7, "metric_std": 0.1},
-                },
-                "speaker_sim": {
-                    "model_a": {"metric_mean": 0.82, "metric_std": 0.04},
-                    "model_b": {"metric_mean": 0.78, "metric_std": 0.03},
-                },
-                "utmos": {
-                    "model_a": {"metric_mean": 4.1, "metric_std": 0.12},
-                    "model_b": {"metric_mean": 4.0, "metric_std": 0.08},
-                },
-                "audiobox": {
-                    "model_a": {"ce_mean": 5.2, "ce_std": 0.3, "pq_mean": 6.1, "pq_std": 0.4},
-                    "model_b": {"ce_mean": 5.0, "ce_std": 0.2, "pq_mean": 5.8, "pq_std": 0.3},
-                },
-            }
-        )
+        models, series = build_plot_series(SAMPLE_SUMMARIES)
 
         grouped = build_grouped_plot_data(models, series)
 
@@ -153,37 +131,7 @@ class PlottingTests(unittest.TestCase):
         self.assertEqual(grouped.legend_title, "Model")
 
     def test_build_grouped_plot_data_can_group_by_model(self) -> None:
-        models, series = build_plot_series(
-            {
-                "ctc": {
-                    "model_a": {"metric_mean": 0.91, "metric_std": 0.03},
-                    "model_b": {"metric_mean": 0.88, "metric_std": 0.02},
-                },
-                "ctc_tortoise": {
-                    "model_a": {"metric_mean": 0.89, "metric_std": 0.02},
-                    "model_b": {"metric_mean": 0.84, "metric_std": 0.01},
-                },
-                "dnsmos": {
-                    "model_a": {"metric_mean": 3.4, "metric_std": 0.1},
-                },
-                "nisqa": {
-                    "model_a": {"metric_mean": 3.9, "metric_std": 0.2},
-                    "model_b": {"metric_mean": 3.7, "metric_std": 0.1},
-                },
-                "speaker_sim": {
-                    "model_a": {"metric_mean": 0.82, "metric_std": 0.04},
-                    "model_b": {"metric_mean": 0.78, "metric_std": 0.03},
-                },
-                "utmos": {
-                    "model_a": {"metric_mean": 4.1, "metric_std": 0.12},
-                    "model_b": {"metric_mean": 4.0, "metric_std": 0.08},
-                },
-                "audiobox": {
-                    "model_a": {"ce_mean": 5.2, "ce_std": 0.3, "pq_mean": 6.1, "pq_std": 0.4},
-                    "model_b": {"ce_mean": 5.0, "ce_std": 0.2, "pq_mean": 5.8, "pq_std": 0.3},
-                },
-            }
-        )
+        models, series = build_plot_series(SAMPLE_SUMMARIES)
 
         grouped = build_grouped_plot_data(models, series, group_by="model")
 
@@ -220,6 +168,44 @@ class PlottingTests(unittest.TestCase):
         self.assertEqual(grouped.std_by_bar[7], [0.4, 0.3])
         self.assertEqual(grouped.x_axis_label, "Model")
         self.assertEqual(grouped.legend_title, "Eval Metric")
+
+    def test_build_metric_plot_data_sorts_models_within_each_metric(self) -> None:
+        models, series = build_plot_series(SAMPLE_SUMMARIES)
+
+        metric_plots = build_metric_plot_data(models, series)
+        by_label = {item.label: item for item in metric_plots}
+
+        self.assertEqual(by_label["CTC Closeness"].model_labels, ["model_a", "model_b"])
+        self.assertEqual(by_label["DNSMOS Overall"].model_labels, ["model_a"])
+        self.assertEqual(by_label["Audiobox PQ"].values, [6.1, 5.8])
+        self.assertEqual(by_label["Audiobox PQ"].slug, "audiobox-pq")
+
+    def test_render_mean_plot_outputs_creates_combined_and_metric_files(self) -> None:
+        try:
+            import matplotlib  # noqa: F401
+        except ModuleNotFoundError:
+            self.skipTest("matplotlib is not installed")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = Path(temp_dir) / "mean_eval_plot.png"
+            outputs = render_mean_plot_outputs(
+                SAMPLE_SUMMARIES,
+                output_path=output_path,
+                title="Styled Eval Plots",
+                include_stddev=True,
+                dpi=100,
+            )
+
+            self.assertTrue(outputs.combined_png.exists())
+            self.assertTrue(outputs.combined_svg.exists())
+            self.assertEqual(outputs.combined_png.name, "mean_eval_plot.png")
+            self.assertEqual(outputs.combined_svg.name, "mean_eval_plot.svg")
+
+            self.assertIn("CTC Closeness", outputs.metric_pngs)
+            self.assertIn("CTC Closeness", outputs.metric_svgs)
+            self.assertTrue(outputs.metric_pngs["CTC Closeness"].exists())
+            self.assertTrue(outputs.metric_svgs["CTC Closeness"].exists())
+            self.assertEqual(outputs.metric_pngs["CTC Closeness"].parent.name, "mean_eval_plot_metrics")
 
 
 if __name__ == "__main__":
