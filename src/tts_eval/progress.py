@@ -48,3 +48,9 @@ def log_model_summary(metric_name: str, summary_payload: dict[str, Any]) -> None
 
 def log_runner_end(metric_name: str, model_count: int) -> None:
     _print(f"[{metric_name}] finished models={model_count}")
+
+
+def log_generation_summary(model_name: str, generated_count: int, speaker_count: int, output_dir: str) -> None:
+    _print(
+        f"[{model_name}] done generated={generated_count} speakers={speaker_count} output_dir={output_dir}"
+    )

@@ -12,6 +12,10 @@ Current runners:
 - `utmos`: per-utterance MOS prediction via the official `UTMOSv2` package
 - `audiobox`: per-utterance aesthetic scores via Audiobox Aesthetics (`CE`, `PQ`)
 
+Model runners:
+
+- `chatterbox_turbo`: generates eval-ready WAV/TXT pairs into `data/inputs/chatterbox_turbo` using `ResembleAI/chatterbox-turbo`
+
 ## Input Layout
 
 Generated inputs are organized by model:
@@ -36,6 +40,41 @@ refs/
   speaker01_00001.txt
   speaker01_00002.wav
   speaker01_00002.txt
+```
+
+Model runners consume references by parsed speaker id. Every reference WAV for a speaker is used in sorted order with deterministic round-robin selection, and every model runner must consume utterance texts from one global stream without resetting between speakers.
+
+The shared generation target is currently fixed at `128` utterances per speaker.
+
+Utterance text construction is intentionally left as a placeholder in [src/tts_eval/utterance_dataset_config.py](/home/iss/code/tts-eval-chatterbox-turbo/src/tts_eval/utterance_dataset_config.py). Fill `DEFAULT_UTTERANCE_TEXT_DATASET_SPECS` with Hugging Face streaming dataset specs before running a model runner.
+
+## Running One Model Runner
+
+Run Chatterbox Turbo:
+
+```bash
+model-runners/chatterbox_turbo/d.sh
+```
+
+This runner:
+
+- reads refs from `data/refs` by default
+- requires GPU Docker access and CUDA execution
+- validates every reference WAV before model load and requires each clip to be longer than `5` seconds
+- writes generated WAV/TXT pairs to `data/inputs/chatterbox_turbo`
+- uses the same Docker launcher pattern as the eval runners
+
+Optional runtime tuning:
+
+```bash
+CHATTERBOX_TURBO_DEVICE=cuda model-runners/chatterbox_turbo/d.sh
+CHATTERBOX_TURBO_TEMPERATURE=0.7 CHATTERBOX_TURBO_TOP_P=0.9 model-runners/chatterbox_turbo/d.sh
+```
+
+You can still override refs and pass a fixed UTC timestamp:
+
+```bash
+model-runners/chatterbox_turbo/d.sh /abs/path/to/refs 2026-03-11T18:20:00Z
 ```
 
 ## Running One Eval
