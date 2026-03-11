@@ -229,13 +229,22 @@ def build_vocab_labels(vocab: dict[str, int], model_vocab_size: int) -> tuple[st
     return tuple(labels)
 
 
+def _vocab_token_aliases(symbol: str) -> tuple[str, ...]:
+    if symbol == " ":
+        return ("|",)
+    if symbol == _PAD:
+        return (_PAD, "<pad>")
+    return (symbol,)
+
+
 def validate_vocab_alignment(vocab: dict[str, int]) -> None:
     for symbol, expected_id in _SYMBOL_TO_ID.items():
-        vocab_token = "|" if symbol == " " else symbol
-        actual_id = vocab.get(vocab_token)
+        vocab_tokens = _vocab_token_aliases(symbol)
+        actual_id = next((vocab[token] for token in vocab_tokens if token in vocab), None)
         if actual_id != expected_id:
+            display_token = vocab_tokens[0]
             raise RuntimeError(
-                f"unexpected tortoise CTC vocab mapping for {vocab_token!r}: "
+                f"unexpected tortoise CTC vocab mapping for {display_token!r}: "
                 f"expected id {expected_id}, got {actual_id}"
             )
 

@@ -8,11 +8,13 @@ from unittest import mock
 
 from tts_eval.ctc import AudioSample, SkipUtteranceError
 from tts_eval.ctc_tortoise import (
+    _SYMBOL_TO_ID,
     decode_greedy,
     english_cleaners,
     evaluate_model,
     text_to_sequence,
     tokenize_transcript,
+    validate_vocab_alignment,
 )
 
 
@@ -30,6 +32,13 @@ class TortoiseTokenizerTests(unittest.TestCase):
         vocab = {"|": 11, "t": 57, "u": 58, "r": 55, "n": 51, "@HH": 106, "@AW1": 82, ".": 7}
         sequence = text_to_sequence("turn {HH AW1}.", symbol_to_id=vocab)
         self.assertEqual(sequence, [57, 58, 55, 51, 11, 106, 82, 7])
+
+    def test_validate_vocab_alignment_accepts_hf_pad_alias(self) -> None:
+        vocab = {
+            ("<pad>" if symbol == "_" else "|" if symbol == " " else symbol): token_id
+            for symbol, token_id in _SYMBOL_TO_ID.items()
+        }
+        validate_vocab_alignment(vocab)
 
     def test_tokenize_transcript_filters_tokenizer_ids_outside_model_vocab(self) -> None:
         class FakeTokenizer:
